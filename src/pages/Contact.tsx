@@ -2,13 +2,23 @@
 
 import SEO from "@/components/SEO"
 import { motion } from "framer-motion"
+import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { CheckCircle, X } from "lucide-react"
 
 const Contact = () => {
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    message: ''
+  });
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -29,6 +39,37 @@ const Contact = () => {
     },
   }
 
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    // Here you would typically send the form data to your backend
+    console.log('Form submitted:', formData);
+    
+    // Show success message
+    setShowSuccessMessage(true);
+    
+    // Clear form
+    setFormData({
+      firstName: '',
+      lastName: '',
+      email: '',
+      message: ''
+    });
+
+    // Hide success message after 5 seconds
+    setTimeout(() => {
+      setShowSuccessMessage(false);
+    }, 5000);
+  };
+
   const contactInfo = [
     {
       title: "General Inquiries",
@@ -36,12 +77,6 @@ const Contact = () => {
       description: "Questions about our platform and services",
       icon: "✉",
     },
-    // {
-    //   title: "Technical Support",
-    //   details: "support@policepositive.com",
-    //   description: "Help with implementation and troubleshooting",
-    //   icon: "🛠️",
-    // },
     {
       title: "Partnership Opportunities",
       details: "partnerships@policepositive.com",
@@ -53,6 +88,28 @@ const Contact = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50/30 via-white to-slate-50/50">
       <SEO title="Contact — Police Positive" description="Get in touch with Police Positive." canonical="/contact" />
+
+      {/* Success Message Toast */}
+      {showSuccessMessage && (
+        <motion.div
+          initial={{ opacity: 0, y: -100, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -100, scale: 0.95 }}
+          className="fixed top-4 right-4 z-50 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center space-x-3 max-w-md border border-green-400/20"
+        >
+          <CheckCircle className="w-6 h-6 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-semibold">Message Sent Successfully! ✨</p>
+            <p className="text-sm text-green-100">We'll respond within 24 hours with priority support.</p>
+          </div>
+          <button
+            onClick={() => setShowSuccessMessage(false)}
+            className="text-green-100 hover:text-white transition-colors duration-200 p-1 rounded-full hover:bg-white/10"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </motion.div>
+      )}
 
       <div className="container mx-auto px-4 py-16 max-w-6xl">
         <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-16">
@@ -92,20 +149,28 @@ const Contact = () => {
                       </p>
                     </div>
 
-                    <form className="space-y-6">
+                    <form className="space-y-6" onSubmit={handleSubmit}>
                       <div className="grid md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <label className="text-sm font-medium text-slate-700">First Name</label>
                           <Input
+                            name="firstName"
+                            value={formData.firstName}
+                            onChange={handleInputChange}
                             placeholder="John"
                             className="bg-white/70 border-slate-200 focus:border-blue-400 focus:ring-blue-400/20"
+                            required
                           />
                         </div>
                         <div className="space-y-2">
                           <label className="text-sm font-medium text-slate-700">Last Name</label>
                           <Input
+                            name="lastName"
+                            value={formData.lastName}
+                            onChange={handleInputChange}
                             placeholder="Doe"
                             className="bg-white/70 border-slate-200 focus:border-blue-400 focus:ring-blue-400/20"
+                            required
                           />
                         </div>
                       </div>
@@ -113,31 +178,31 @@ const Contact = () => {
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-700">Email Address</label>
                         <Input
+                          name="email"
+                          value={formData.email}
+                          onChange={handleInputChange}
                           placeholder="john.doe@department.gov"
                           type="email"
                           className="bg-white/70 border-slate-200 focus:border-blue-400 focus:ring-blue-400/20"
+                          required
                         />
                       </div>
-
-                      {/* <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700">Subject</label>
-                        <Input
-                          placeholder="Subject"
-                          className="bg-white/70 border-slate-200 focus:border-blue-400 focus:ring-blue-400/20"
-                        />
-                      </div> */}
 
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-700">Message</label>
                         <Textarea
+                          name="message"
+                          value={formData.message}
+                          onChange={handleInputChange}
                           placeholder="Tell us about your department's communication needs and how we can help..."
                           rows={5}
                           className="bg-white/70 border-slate-200 focus:border-blue-400 focus:ring-blue-400/20 resize-none"
+                          required
                         />
                       </div>
 
                       <Button
-                        type="button"
+                        type="submit"
                         className="w-full bg-gradient-to-r from-red-500 via-red-700 to-red-500 hover:from-blue-700 hover:to-slate-800 text-white font-medium py-3 transition-all duration-300 shadow-md hover:shadow-lg"
                       >
                         Send Message
@@ -189,7 +254,7 @@ const Contact = () => {
                 <Card className="border-0 shadow-lg bg-gradient-to-r from-red-500 via-red-700 to-red-500 text-white">
                   <CardContent className="p-6">
                     <div className="text-center space-y-3">
-                      <div className="text-3xl"></div>
+                      <div className="text-3xl">⚡</div>
                       <h3 className="text-lg font-semibold">Quick Response Guarantee</h3>
                       <p className="text-sm opacity-90">
                         We understand the urgency of law enforcement communication needs. Expect a response within 24
