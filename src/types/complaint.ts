@@ -16,7 +16,7 @@ export interface Complaint {
     email?: string;
     isAnonymous: boolean;
   };
-  status: 'pending' | 'under_review' | 'investigating' | 'resolved' | 'closed';
+  status: 'pending' | 'assigned' | 'investigating' | 'resolved' | 'closed';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   assignedOfficer?: {
     id: string;

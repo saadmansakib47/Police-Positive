@@ -15,7 +15,7 @@ const complaintSchema = new mongoose.Schema(
     reporterInfo: { type: mongoose.Schema.Types.Mixed, required: true },
     status: {
       type: String,
-      enum: ["pending", "under_review", "investigating", "resolved", "closed"],
+      enum: ["pending", "assigned", "investigating", "resolved", "closed"],
       default: "pending",
     },
     notes: [

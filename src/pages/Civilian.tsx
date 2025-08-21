@@ -287,7 +287,7 @@ const Civilian = () => {
                   </div>
                   <div className="flex items-center gap-2 ml-4">
                     <Badge className={`${report.status === 'closed' ? 'bg-green-100 text-green-800' :
-                      report.status === 'under_review' ? 'bg-blue-100 text-blue-800' :
+                      report.status === 'assigned' ? 'bg-blue-100 text-blue-800' :
                         report.status === 'investigating' ? 'bg-purple-100 text-purple-800' :
                           report.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                             'bg-gray-100 text-gray-800'

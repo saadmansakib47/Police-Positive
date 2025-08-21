@@ -69,7 +69,7 @@ class ComplaintsAPI {
   // -------------------------
   // Other API methods
   // -------------------------
-  async getComplaints(filters?: ComplaintFilters): Promise<Complaint[]> {
+  async getComplaints(filters?: ComplaintFilters, sortBy?: string, sortOrder?: 'asc' | 'desc'): Promise<{ complaints: Complaint[]; pagination: any }> {
     const params = new URLSearchParams();
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
@@ -77,15 +77,30 @@ class ComplaintsAPI {
           if (Array.isArray(value)) {
             value.forEach(v => params.append(key, v));
           } else if (typeof value === 'object') {
-            params.append(key, JSON.stringify(value));
+            // Handle dateRange specifically
+            if (key === 'dateRange' && value.from && value.to) {
+              params.append('startDate', value.from);
+              params.append('endDate', value.to);
+            } else {
+              params.append(key, JSON.stringify(value));
+            }
           } else {
             params.append(key, value.toString());
           }
         }
       });
     }
+
+    if (sortBy) {
+      params.append('sortBy', sortBy);
+    }
+    if (sortOrder) {
+      params.append('sortOrder', sortOrder);
+    }
+
     const queryString = params.toString();
-    return this.request<Complaint[]>(`/complaints${queryString ? `?${queryString}` : ''}`);
+
+    return this.request<{ complaints: Complaint[]; pagination: any }>(`/complaints${queryString ? `?${queryString}` : ''}`);
   }
 
   async getComplaintById(id: string): Promise<Complaint> {

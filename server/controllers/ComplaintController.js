@@ -1,8 +1,11 @@
-// import User from "../models/User.js"
+import escapeRegExp from "lodash"
+
+import User from "../models/User.js"
 import Complaint from "../models/Complaint.js"
 import EvidenceFile from "../models/EvidenceFile.js"
 import TimelineEvent from "../models/TimelineEvent.js"
 import { addTimelineEvent, generateCaseNumber } from "../utils/caseHelpers.js"
+import mongoose from "mongoose"
 
 const createComplaint = async (req, res) => {
   try {
@@ -132,18 +135,20 @@ const getComplaints = async (req, res) => {
       search,
       startDate,
       endDate,
+      sortBy = "-createdAt",
+      sortOrder = "desc",
     } = req.query
 
     const filter = {}
-
     if (status) filter.status = status
     if (category) filter.category = category
     if (priority) filter.priority = priority
     if (search) {
+      const escapedSearch = escapeRegExp(search)
       filter.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
-        { caseNumber: { $regex: search, $options: "i" } },
+        { title: { $regex: escapedSearch, $options: "i" } },
+        { description: { $regex: escapedSearch, $options: "i" } },
+        { caseNumber: { $regex: escapedSearch, $options: "i" } },
       ]
     }
     if (startDate || endDate) {
@@ -152,11 +157,35 @@ const getComplaints = async (req, res) => {
       if (endDate) filter.createdAt.$lte = new Date(endDate)
     }
 
+    let sortOption = {}
+    const allowedSortFields = [
+      "createdAt",
+      "updatedAt",
+      "priority",
+      "status",
+      "category",
+    ]
+
+    let sortField = sortBy.startsWith("-") ? sortBy.substring(1) : sortBy
+    let actualSortOrder = sortBy.startsWith("-") ? -1 : 1
+
+    if (sortOrder === "asc") {
+      actualSortOrder = 1
+    } else if (sortOrder === "desc") {
+      actualSortOrder = -1
+    }
+
+    if (allowedSortFields.includes(sortField)) {
+      sortOption[sortField] = actualSortOrder
+    } else {
+      sortOption = { createdAt: -1 }
+    }
+
     const skip = (page - 1) * limit
     const complaints = await Complaint.find(filter)
       .populate("assignedOfficer", "firstName lastName badgeNumber")
       .populate("createdBy", "firstName lastName email")
-      .sort({ createdAt: -1 })
+      .sort(sortOption)
       .skip(skip)
       .limit(parseInt(limit))
 
@@ -186,7 +215,13 @@ const getComplaints = async (req, res) => {
         : undefined,
       evidence: {
         files: [],
-        notes: complaint.notes ? complaint.notes.map((note) => note.text) : [],
+        notes: complaint.notes
+          ? complaint.notes.map((note) => ({
+              text: note.text,
+              createdAt: note.createdAt.toISOString(),
+              by: note.by ? note.by.toString() : null,
+            }))
+          : [],
       },
       timeline: [],
       createdAt: complaint.createdAt.toISOString(),
@@ -543,12 +578,205 @@ const getFileType = (mimetype) => {
   return "document"
 }
 
+const updateComplaintStatus = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status, note } = req.body
+
+    const validStatuses = [
+      "pending",
+      "assigned",
+      "investigating",
+      "resolved",
+      "closed",
+    ]
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: "Invalid status provided" })
+    }
+
+    const complaint = await Complaint.findById(id)
+    if (!complaint) {
+      return res.status(404).json({ message: "Complaint not found" })
+    }
+
+    const oldStatus = complaint.status
+    complaint.status = status
+    await complaint.save()
+
+    let timelineEventType = "updated"
+    let description = `Status changed from ${oldStatus.replace(
+      "_",
+      " "
+    )} to ${status.replace("_", " ")}`
+
+    if (status === "resolved") {
+      timelineEventType = "resolved"
+      description = "Case marked as resolved"
+    } else if (status === "closed") {
+      timelineEventType = "updated"
+      description = "Case marked as closed"
+    }
+
+    if (note && timelineEventType !== "resolved") {
+      description += `: ${note}`
+    } else if (note && timelineEventType === "resolved") {
+      description += ` - ${note}`
+    }
+
+    await addTimelineEvent(
+      complaint._id,
+      timelineEventType,
+      description,
+      req.user.id
+    )
+
+    const updatedComplaint = await Complaint.findById(id)
+      .populate("assignedOfficer", "firstName lastName badgeNumber")
+      .populate("createdBy", "firstName lastName email")
+
+    const response = {
+      id: updatedComplaint._id.toString(),
+      caseNumber: updatedComplaint.caseNumber,
+      type: updatedComplaint.type,
+      category: updatedComplaint.category,
+      title: updatedComplaint.title,
+      description: updatedComplaint.description,
+      location: {
+        address: updatedComplaint.location.address,
+        lat: updatedComplaint.location.lat,
+        lng: updatedComplaint.location.lng,
+      },
+      reporterInfo: updatedComplaint.reporterInfo,
+      status: updatedComplaint.status,
+      priority: updatedComplaint.priority,
+      assignedOfficer: updatedComplaint.assignedOfficer
+        ? {
+            id: updatedComplaint.assignedOfficer._id.toString(),
+            name: `${updatedComplaint.assignedOfficer.firstName} ${updatedComplaint.assignedOfficer.lastName}`,
+            badgeNumber: updatedComplaint.assignedOfficer.badgeNumber,
+          }
+        : undefined,
+      evidence: {
+        files: [],
+        notes: updatedComplaint.notes
+          ? updatedComplaint.notes.map((n) => ({
+              text: n.text,
+              createdAt: n.createdAt.toISOString(),
+              by: n.by ? n.by.toString() : null,
+            }))
+          : [],
+      },
+      timeline: [],
+      createdAt: updatedComplaint.createdAt.toISOString(),
+      updatedAt: updatedComplaint.updatedAt.toISOString(),
+      createdBy: updatedComplaint.createdBy
+        ? updatedComplaint.createdBy._id.toString()
+        : null,
+    }
+
+    res.json(response)
+  } catch (err) {
+    console.error("Error updating complaint status:", err)
+    res.status(500).json({ message: "Server error" })
+  }
+}
+
+const assignComplaint = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { officerId } = req.body
+
+    if (!mongoose.Types.ObjectId.isValid(officerId)) {
+      return res.status(400).json({ message: "Invalid officer ID provided" })
+    }
+
+    const complaint = await Complaint.findById(id)
+    if (!complaint) {
+      return res.status(404).json({ message: "Complaint not found" })
+    }
+
+    const oldOfficerId = complaint.assignedOfficer
+    const wasUnassigned = !oldOfficerId
+
+    complaint.assignedOfficer = officerId
+
+    if (wasUnassigned && complaint.status === "pending") {
+      complaint.status = "assigned"
+    }
+    await complaint.save()
+
+    const officer = await User.findById(officerId)
+    let description = `Case assigned to ${
+      officer
+        ? officer.firstName + " " + officer.lastName
+        : "Officer ID: " + officerId
+    }`
+    if (!wasUnassigned) {
+      description = `Case reassigned from previous officer to ${
+        officer
+          ? officer.firstName + " " + officer.lastName
+          : "Officer ID: " + officerId
+      }`
+    }
+    await addTimelineEvent(complaint._id, "assigned", description, req.user.id)
+
+    const updatedComplaint = await Complaint.findById(id)
+      .populate("assignedOfficer", "firstName lastName badgeNumber")
+      .populate("createdBy", "firstName lastName email")
+
+    const response = {
+      id: updatedComplaint._id.toString(),
+      caseNumber: updatedComplaint.caseNumber,
+      type: updatedComplaint.type,
+      category: updatedComplaint.category,
+      title: updatedComplaint.title,
+      description: updatedComplaint.description,
+      location: {
+        address: updatedComplaint.location.address,
+        lat: updatedComplaint.location.lat,
+        lng: updatedComplaint.location.lng,
+      },
+      reporterInfo: updatedComplaint.reporterInfo,
+      status: updatedComplaint.status,
+      priority: updatedComplaint.priority,
+      assignedOfficer: updatedComplaint.assignedOfficer
+        ? {
+            id: updatedComplaint.assignedOfficer._id.toString(),
+            name: `${updatedComplaint.assignedOfficer.firstName} ${updatedComplaint.assignedOfficer.lastName}`,
+            badgeNumber: updatedComplaint.assignedOfficer.badgeNumber,
+          }
+        : undefined,
+      evidence: {
+        files: [], // Populate if needed
+        notes: updatedComplaint.notes
+          ? updatedComplaint.notes.map((n) => ({
+              text: n.text,
+              createdAt: n.createdAt.toISOString(),
+              by: n.by ? n.by.toString() : null,
+            }))
+          : [],
+      },
+      timeline: [], // Populate if needed
+      createdAt: updatedComplaint.createdAt.toISOString(),
+      updatedAt: updatedComplaint.updatedAt.toISOString(),
+      createdBy: updatedComplaint.createdBy
+        ? updatedComplaint.createdBy._id.toString()
+        : null,
+    }
+
+    res.json(response)
+  } catch (err) {
+    console.error("Error assigning complaint:", err)
+    res.status(500).json({ message: "Server error" })
+  }
+}
+
 export {
   createComplaint,
   getComplaints,
   getComplaintById,
-  // updateComplaintStatus,
-  // assignComplaint,
+  updateComplaintStatus,
+  assignComplaint,
   // addNote,
   getDashboardStats,
   getMyComplaints,

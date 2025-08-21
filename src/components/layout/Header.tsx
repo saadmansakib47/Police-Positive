@@ -41,7 +41,7 @@ const Header = () => {
   const getRoleDisplayName = (role?: string) => {
     switch (role) {
       case 'civilian': return 'Civilian';
-      case 'operator': return 'Police Officer';
+      case 'operator': return 'Police Operator';
       case 'supervisor': return 'Supervisor';
       case 'patrol': return 'Patrol Officer';
       default: return role || '';

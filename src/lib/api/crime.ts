@@ -1,13 +1,13 @@
 import { CrimeReport, CrimeReportFormData, CaseUpdate } from '@/types/crime';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // Update to use complaints endpoints
 class CrimeAPI {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
     const token = localStorage.getItem('token');
-    
+
     const config: RequestInit = {
       headers: {
         ...(token && { Authorization: `Bearer ${token}` }),
@@ -17,7 +17,7 @@ class CrimeAPI {
     };
 
     const response = await fetch(url, config);
-    
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Network error' }));
       throw new Error(error.message || `HTTP error! status: ${response.status}`);
@@ -28,7 +28,7 @@ class CrimeAPI {
 
   async submitReport(data: CrimeReportFormData): Promise<CrimeReport> {
     const formData = new FormData();
-    
+
     // Add complaint data as JSON string
     formData.append('complaintData', JSON.stringify({
       type: data.type,
@@ -38,7 +38,7 @@ class CrimeAPI {
       location: data.location,
       reporterInfo: data.reporterInfo,
     }));
-    
+
     // Add files
     if (data.evidence?.files) {
       data.evidence.files.forEach((file) => {
@@ -65,7 +65,7 @@ class CrimeAPI {
         if (value) params.append(key, value);
       });
     }
-    
+
     return this.request<CrimeReport[]>(`/complaints?${params.toString()}`);  // Already correct
   }
 

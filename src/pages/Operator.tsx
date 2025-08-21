@@ -5,34 +5,31 @@ import {
   Clock,
   Users,
   MapPin,
-  Filter,
-  Search,
   CheckCircle,
   Eye,
-  UserCheck
+  UserCheck,
 } from 'lucide-react';
 import SEO from '@/components/SEO';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
-import { crimeAPI } from '@/lib/api/crime';
-import { CrimeReport } from '@/types/crime';
+import { complaintsAPI } from '@/lib/api/complaints';
+import { Complaint } from '@/types/complaint';
 import { useToast } from '@/hooks/use-toast';
 
-// Update status mapping to match complaint.ts
-const statusColors = {
+const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
-  assigned: 'bg-blue-100 text-blue-800',  // Changed from 'under_review'
+  assigned: 'bg-blue-100 text-blue-800',
   investigating: 'bg-purple-100 text-purple-800',
   resolved: 'bg-green-100 text-green-800',
   closed: 'bg-gray-100 text-gray-800',
 };
 
-const priorityColors = {
+const priorityColors: Record<string, string> = {
   low: 'bg-gray-100 text-gray-800',
   medium: 'bg-yellow-100 text-yellow-800',
   high: 'bg-orange-100 text-orange-800',
@@ -40,31 +37,48 @@ const priorityColors = {
 };
 
 const Operator = () => {
-  const [allReports, setAllReports] = useState<CrimeReport[]>([]);
-  const [myReports, setMyReports] = useState<CrimeReport[]>([]);
+  const [allReports, setAllReports] = useState<Complaint[]>([]);
+  const [myReports, setMyReports] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('-createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalItems: 0, hasNext: false, hasPrev: false });
   const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
     loadReports();
-  }, []);
+  }, [priorityFilter, statusFilter, categoryFilter, searchTerm, sortBy, sortOrder, pagination.currentPage]);
 
   const loadReports = async () => {
     try {
-      const [all, assigned] = await Promise.all([
-        crimeAPI.getReports(),
-        crimeAPI.getReports({ assignedOfficer: user?.id })
-      ]);
-      setAllReports(all);
-      setMyReports(assigned);
-    } catch (error: Error | unknown) {
+      setLoading(true);
+
+      const filters: any = {};
+      if (priorityFilter !== 'all') filters.priority = priorityFilter;
+      if (statusFilter !== 'all') filters.status = statusFilter;
+      if (categoryFilter !== 'all') filters.category = categoryFilter;
+      if (searchTerm) filters.search = searchTerm;
+
+      const allResponse = await complaintsAPI.getComplaints(filters, sortBy, sortOrder);
+      setAllReports(allResponse.complaints);
+      setPagination(allResponse.pagination);
+
+      if (user?._id) {
+        const myResponse = await complaintsAPI.getComplaints({ assignedOfficer: user._id }, sortBy, sortOrder);
+        setMyReports(myResponse.complaints);
+      } else {
+        setMyReports([]);
+      }
+    } catch (error: any) {
+      console.error("Error loading reports:", error);
       toast({
         title: "Error loading reports",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        description: error.message || "An unknown error occurred",
         variant: "destructive"
       });
     } finally {
@@ -72,18 +86,21 @@ const Operator = () => {
     }
   };
 
-  const handleStatusUpdate = async (reportId: string, newStatus: CrimeReport['status']) => {
+  const handleStatusUpdate = async (reportId: string, newStatus: Complaint['status']) => {
     try {
-      await crimeAPI.updateReportStatus(reportId, newStatus);
-      await loadReports();
+      const updatedReport = await complaintsAPI.updateComplaintStatus(reportId, newStatus);
+
+      setAllReports(prev => prev.map(r => r.id === reportId ? updatedReport : r));
+      setMyReports(prev => prev.map(r => r.id === reportId ? updatedReport : r));
       toast({
         title: "Status Updated",
         description: "Report status has been updated successfully."
       });
-    } catch (error: Error | unknown) {
+    } catch (error: any) {
+      console.error("Update Failed:", error);
       toast({
         title: "Update Failed",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        description: error.message || "An unknown error occurred",
         variant: "destructive"
       });
     }
@@ -91,62 +108,45 @@ const Operator = () => {
 
   const handleAssignToSelf = async (reportId: string) => {
     try {
-      await crimeAPI.assignOfficer(reportId, user?.id || '');
-      await loadReports();
+      if (!user?._id) throw new Error("User ID not found");
+      const updatedReport = await complaintsAPI.assignComplaint(reportId, user._id);
+
+      setAllReports(prev => prev.map(r => r.id === reportId ? updatedReport : r));
+
+      setMyReports(prev => [...prev, updatedReport]);
       toast({
         title: "Case Assigned",
         description: "Case has been assigned to you."
       });
-    } catch (error: Error | unknown) {
+    } catch (error: any) {
+      console.error("Assignment Failed:", error);
       toast({
         title: "Assignment Failed",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        description: error.message || "An unknown error occurred",
         variant: "destructive"
       });
     }
   };
 
-  const filterReports = (reports: CrimeReport[]) => {
-    let filtered = reports;
-
-    if (searchTerm) {
-      filtered = filtered.filter(report =>
-        report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        report.caseNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        report.description.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (priorityFilter !== 'all') {
-      filtered = filtered.filter(report => report.priority === priorityFilter);
-    }
-
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(report => report.status === statusFilter);
-    }
-
-    return filtered.sort((a, b) => {
-      // Sort by priority first, then by creation date
-      const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-      const aPriority = priorityOrder[a.priority];
-      const bPriority = priorityOrder[b.priority];
-
-      if (aPriority !== bPriority) {
-        return bPriority - aPriority;
-      }
-
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
+  const handleSortChange = (value: string) => {
+    setSortBy(value);
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
   };
 
+  const handlePageChange = (newPage: number) => {
+    setPagination(prev => ({ ...prev, currentPage: newPage }));
+  };
+
+  const availableCategories = ['theft', 'assault', 'fraud', 'domestic', 'traffic', 'cybercrime', 'other'];
+
   const stats = {
-    total: allReports.length,
+    total: pagination.totalItems,
     pending: allReports.filter(r => r.status === 'pending').length,
     urgent: allReports.filter(r => r.priority === 'urgent').length,
     myActive: myReports.filter(r => !['resolved', 'closed'].includes(r.status)).length,
   };
 
-  const ReportCard = ({ report, showAssignButton = false }: { report: CrimeReport; showAssignButton?: boolean }) => (
+  const ReportCard = ({ report, showAssignButton = false }: { report: Complaint; showAssignButton?: boolean }) => (
     <Card key={report.id} className="hover:shadow-md transition-shadow">
       <CardContent className="p-6">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between">
@@ -163,7 +163,6 @@ const Operator = () => {
                 </Badge>
               )}
             </div>
-
             <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
               <span>Case: {report.caseNumber}</span>
               <span>•</span>
@@ -175,33 +174,28 @@ const Operator = () => {
                   <span>•</span>
                   <span className="flex items-center gap-1">
                     <UserCheck className="h-3 w-3" />
-                    Assigned
+                    {report.assignedOfficer.name || `Badge: ${report.assignedOfficer.badgeNumber}`}
                   </span>
                 </>
               )}
             </div>
-
             <div className="flex items-center gap-2 mb-2">
               <MapPin className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">{report.location.address}</span>
             </div>
-
             <p className="text-sm text-muted-foreground line-clamp-2">
               {report.description}
             </p>
           </div>
-
           <div className="flex flex-col gap-2 mt-4 lg:mt-0 lg:ml-4">
             <div className="flex items-center gap-2">
-              <Badge className={statusColors[report.status]}>
+              <Badge className={statusColors[report.status] || 'bg-gray-100 text-gray-800'}>
                 <span className="capitalize">{report.status.replace('_', ' ')}</span>
               </Badge>
-
-              <Badge variant="outline" className={priorityColors[report.priority]}>
+              <Badge variant="outline" className={priorityColors[report.priority] || 'bg-gray-100 text-gray-800'}>
                 {report.priority.toUpperCase()}
               </Badge>
             </div>
-
             <div className="flex gap-2">
               {showAssignButton && !report.assignedOfficer && (
                 <Button
@@ -212,24 +206,21 @@ const Operator = () => {
                   Assign to Me
                 </Button>
               )}
-
               <Select
                 value={report.status}
-                onValueChange={(value) => handleStatusUpdate(report.id, value as CrimeReport['status'])}
+                onValueChange={(value) => handleStatusUpdate(report.id, value as Complaint['status'])}
               >
                 <SelectTrigger className="w-[140px] h-8">
-                  <SelectValue />
+                  <SelectValue placeholder="Change Status" />
                 </SelectTrigger>
-                // Update status select options
                 <SelectContent>
                   <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="assigned">Assigned</SelectItem>
+                  <SelectItem value="assigned">Assigned</SelectItem> {/* Match backend */}
                   <SelectItem value="investigating">Investigating</SelectItem>
                   <SelectItem value="resolved">Resolved</SelectItem>
                   <SelectItem value="closed">Closed</SelectItem>
                 </SelectContent>
               </Select>
-
               <Button asChild variant="outline" size="sm">
                 <Link to={`/track?case=${report.caseNumber}`}>
                   <Eye className="h-4 w-4" />
@@ -255,19 +246,17 @@ const Operator = () => {
   return (
     <div className="container mx-auto py-8">
       <SEO
-        title="Operator Dashboard — Police Positive"
+        title="Operator Dashboard - Police Positive"
         description="Police operator dashboard for case management"
         canonical="/operator"
       />
-
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Operator Dashboard</h1>
         <p className="text-muted-foreground">
-          Welcome, Officer {user?.name}. Manage incoming reports and track investigations.
+          Welcome, Officer {user?.firstName}. Manage incoming reports and track investigations.
         </p>
       </div>
-
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <Card>
@@ -280,7 +269,6 @@ const Operator = () => {
             <p className="text-xs text-muted-foreground">All active cases</p>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
@@ -291,7 +279,6 @@ const Operator = () => {
             <p className="text-xs text-muted-foreground">Awaiting assignment</p>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Urgent Cases</CardTitle>
@@ -302,7 +289,6 @@ const Operator = () => {
             <p className="text-xs text-muted-foreground">Require immediate attention</p>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">My Active Cases</CardTitle>
@@ -314,8 +300,7 @@ const Operator = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Filters */}
+      {/* Filters and Sorting */}
       <Card className="mb-6">
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-4">
@@ -323,11 +308,14 @@ const Operator = () => {
               <Input
                 placeholder="Search by case number, title, or description..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPagination(prev => ({ ...prev, currentPage: 1 })); // Reset to page 1 on search
+                }}
                 className="w-full"
               />
             </div>
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <Select value={priorityFilter} onValueChange={(value) => { setPriorityFilter(value); setPagination(prev => ({ ...prev, currentPage: 1 })); }}>
               <SelectTrigger className="w-full md:w-[150px]">
                 <SelectValue placeholder="Priority" />
               </SelectTrigger>
@@ -339,32 +327,60 @@ const Operator = () => {
                 <SelectItem value="low">Low</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); setPagination(prev => ({ ...prev, currentPage: 1 })); }}>
               <SelectTrigger className="w-full md:w-[150px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="under_review">Under Review</SelectItem>
+                <SelectItem value="assigned">Assigned</SelectItem> {/* Match backend */}
                 <SelectItem value="investigating">Investigating</SelectItem>
                 <SelectItem value="resolved">Resolved</SelectItem>
+                <SelectItem value="closed">Closed</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={categoryFilter} onValueChange={(value) => { setCategoryFilter(value); setPagination(prev => ({ ...prev, currentPage: 1 })); }}>
+              <SelectTrigger className="w-full md:w-[150px]">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {availableCategories.map(cat => (
+                  <SelectItem key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Sorting Controls */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Sort by:</span>
+              <Select value={sortBy} onValueChange={handleSortChange}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Sort By" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="createdAt">Date Created (Asc)</SelectItem>
+                  <SelectItem value="-createdAt">Date Created (Desc)</SelectItem>
+                  <SelectItem value="priority">Priority (Asc)</SelectItem>
+                  <SelectItem value="-priority">Priority (Desc)</SelectItem>
+                  <SelectItem value="status">Status</SelectItem>
+                  <SelectItem value="category">Category</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
-
       {/* Reports Tabs */}
       <Tabs defaultValue="all" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="all">All Reports ({allReports.length})</TabsTrigger>
+          <TabsTrigger value="all">All Reports ({pagination.totalItems})</TabsTrigger>
           <TabsTrigger value="my-cases">My Cases ({myReports.length})</TabsTrigger>
           <TabsTrigger value="urgent">Urgent ({stats.urgent})</TabsTrigger>
         </TabsList>
-
         <TabsContent value="all" className="space-y-4">
-          {filterReports(allReports).length === 0 ? (
+          {allReports.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
                 <div className="text-muted-foreground">
@@ -373,14 +389,36 @@ const Operator = () => {
               </CardContent>
             </Card>
           ) : (
-            filterReports(allReports).map((report) => (
-              <ReportCard key={report.id} report={report} showAssignButton={true} />
-            ))
+            <>
+              {allReports.map((report) => (
+                <ReportCard key={report.id} report={report} showAssignButton={true} />
+              ))}
+              {pagination.totalPages > 1 && (
+                <div className="flex justify-center items-center space-x-2 mt-4">
+                  <Button
+                    onClick={() => handlePageChange(pagination.currentPage - 1)}
+                    disabled={!pagination.hasPrev}
+                    variant="outline"
+                  >
+                    Previous
+                  </Button>
+                  <span>
+                    Page {pagination.currentPage} of {pagination.totalPages}
+                  </span>
+                  <Button
+                    onClick={() => handlePageChange(pagination.currentPage + 1)}
+                    disabled={!pagination.hasNext}
+                    variant="outline"
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
-
         <TabsContent value="my-cases" className="space-y-4">
-          {filterReports(myReports).length === 0 ? (
+          {myReports.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
                 <div className="text-muted-foreground">
@@ -389,14 +427,15 @@ const Operator = () => {
               </CardContent>
             </Card>
           ) : (
-            filterReports(myReports).map((report) => (
-              <ReportCard key={report.id} report={report} />
-            ))
+            <>
+              {myReports.map((report) => (
+                <ReportCard key={report.id} report={report} />
+              ))}
+            </>
           )}
         </TabsContent>
-
         <TabsContent value="urgent" className="space-y-4">
-          {filterReports(allReports.filter(r => r.priority === 'urgent')).length === 0 ? (
+          {allReports.filter(r => r.priority === 'urgent').length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
                 <div className="text-muted-foreground">
@@ -405,9 +444,11 @@ const Operator = () => {
               </CardContent>
             </Card>
           ) : (
-            filterReports(allReports.filter(r => r.priority === 'urgent')).map((report) => (
-              <ReportCard key={report.id} report={report} showAssignButton={true} />
-            ))
+            <>
+              {allReports.filter(r => r.priority === 'urgent').map((report) => (
+                <ReportCard key={report.id} report={report} showAssignButton={true} />
+              ))}
+            </>
           )}
         </TabsContent>
       </Tabs>

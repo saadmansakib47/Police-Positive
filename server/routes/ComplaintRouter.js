@@ -3,8 +3,8 @@ import {
   createComplaint,
   getComplaints,
   getComplaintById,
-  // updateComplaintStatus,
-  // assignComplaint,
+  updateComplaintStatus,
+  assignComplaint,
   // addNote,
   getDashboardStats,
   getMyComplaints,
@@ -24,8 +24,8 @@ router.get("/", authenticateToken, getComplaints)
 router.get("/my", authenticateToken, getMyComplaints)
 router.get("/stats", authenticateToken, getDashboardStats)
 router.get("/:id", authenticateToken, getComplaintById)
-// router.patch("/:id/status", authenticateToken, updateComplaintStatus)
-// router.patch("/:id/assign", authenticateToken, assignComplaint)
+router.patch("/:id/status", authenticateToken, updateComplaintStatus)
+router.patch("/:id/assign", authenticateToken, assignComplaint)
 // router.post("/:id/notes", authenticateToken, addNote)
 
 export default router
