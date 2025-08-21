@@ -21,11 +21,13 @@ export interface Complaint {
   assignedOfficer?: {
     id: string;
     name: string;
+    firstName?: string;
+    lastName?: string;
     badgeNumber: string;
   };
   evidence: {
     files: FileEvidence[];
-    notes: string[];
+    notes: Array<{ text: string; createdAt: string; by: string | null }>;
   };
   timeline: TimelineEvent[];
   createdAt: string;

@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { CreateComplaintData } from '@/types/complaint';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
 const crimeReportSchema = z.object({
@@ -173,7 +173,7 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="container mx-auto space-y-6">
       {/* Report Type Selection */}
       <Card>
         <CardHeader>
@@ -202,12 +202,12 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
                         <RadioGroupItem value="GD" id="GD" className="peer sr-only" />
                         <Label
                           htmlFor="GD"
-                          className="flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                          className="flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-gray-100 peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                         >
                           <div className="space-y-1">
                             <div className="font-semibold">General Diary (GD)</div>
                             <div className="text-sm text-muted-foreground">
-                              For non-cognizable offenses, complaints, and general information
+                              For non-cognizable offenses, complaints & general information
                             </div>
                           </div>
                         </Label>
@@ -216,7 +216,7 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
                         <RadioGroupItem value="FIR" id="FIR" className="peer sr-only" />
                         <Label
                           htmlFor="FIR"
-                          className="flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                          className="flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-gray-100 peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                         >
                           <div className="space-y-1">
                             <div className="font-semibold">First Information Report (FIR)</div>
@@ -263,7 +263,7 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
                       <SelectContent>
                         {categoryOptions.map((option) => (
                           <SelectItem key={option.value} value={option.value}>
-                            <div className="flex flex-col">
+                            <div className="flex flex-col items-start">
                               <span>{option.label}</span>
                               <span className="text-xs text-muted-foreground">{option.description}</span>
                             </div>

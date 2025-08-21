@@ -16,7 +16,7 @@ import SEO from '@/components/SEO';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { complaintsAPI } from '@/lib/api/complaints';
 import { Complaint } from '@/types/complaint';
 import { useToast } from '@/hooks/use-toast';

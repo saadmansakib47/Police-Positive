@@ -6,10 +6,9 @@ import { z } from 'zod';
 import { Eye, EyeOff, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import SEO from '@/components/SEO';
 
 const loginSchema = z.object({
@@ -24,7 +23,7 @@ const Login = () => {
   const { login, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   const from = location.state?.from?.pathname || '/';
 
   const form = useForm<LoginFormData>({
@@ -46,10 +45,10 @@ const Login = () => {
 
   return (
     <>
-      <SEO 
-        title="Login - Police Positive" 
-        description="Login to your Police Positive account" 
-        canonical="/login" 
+      <SEO
+        title="Login - Police Positive"
+        description="Login to your Police Positive account"
+        canonical="/login"
       />
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
         <Card className="w-full max-w-md">
@@ -82,7 +81,7 @@ const Login = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="password"
@@ -116,20 +115,20 @@ const Login = () => {
                   )}
                 />
 
-                <Button 
-                  type="submit" 
-                  className="w-full" 
+                <Button
+                  type="submit"
+                  className="w-full"
                   disabled={isLoading}
                 >
                   {isLoading ? 'Signing in...' : 'Sign In'}
                 </Button>
               </form>
             </Form>
-            
+
             <div className="mt-6 text-center text-sm">
               <span className="text-muted-foreground">Don't have an account? </span>
-              <Link 
-                to="/register" 
+              <Link
+                to="/register"
                 className="text-blue-600 hover:text-blue-500 font-medium"
               >
                 Sign up

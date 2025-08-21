@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { 
+import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Area, AreaChart
 } from 'recharts';
-import { 
-  Users, TrendingUp, Clock, CheckCircle, AlertTriangle, 
+import {
+  Users, TrendingUp, Clock, CheckCircle, AlertTriangle,
   FileText, UserCheck, MapPin, Calendar, Filter
 } from 'lucide-react';
 import SEO from '@/components/SEO';
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { complaintsAPI } from '@/lib/api/complaints';
 import { CrimeStatistics } from '@/types/crime';
 import { useToast } from '@/hooks/use-toast';
@@ -73,12 +73,12 @@ const Supervisor = () => {
 
   return (
     <div className="container mx-auto py-8">
-      <SEO 
-        title="Supervisor Dashboard — Police Positive" 
-        description="Police supervisor dashboard with analytics and insights" 
-        canonical="/supervisor" 
+      <SEO
+        title="Supervisor Dashboard — Police Positive"
+        description="Police supervisor dashboard with analytics and insights"
+        canonical="/supervisor"
       />
-      
+
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
@@ -120,7 +120,7 @@ const Supervisor = () => {
             </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
@@ -133,7 +133,7 @@ const Supervisor = () => {
             </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Resolved Cases</CardTitle>
@@ -146,7 +146,7 @@ const Supervisor = () => {
             </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg Resolution</CardTitle>
@@ -169,7 +169,7 @@ const Supervisor = () => {
           <TabsTrigger value="performance">Performance</TabsTrigger>
           <TabsTrigger value="trends">Trends</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
@@ -219,7 +219,7 @@ const Supervisor = () => {
             </Card>
           </div>
         </TabsContent>
-        
+
         <TabsContent value="categories" className="space-y-6">
           <Card>
             <CardHeader>
@@ -239,7 +239,7 @@ const Supervisor = () => {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="performance" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
@@ -256,8 +256,8 @@ const Supervisor = () => {
                     </Badge>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-green-600 h-2 rounded-full" 
+                    <div
+                      className="bg-green-600 h-2 rounded-full"
                       style={{ width: `${(stats.resolvedReports / stats.totalReports) * 100}%` }}
                     ></div>
                   </div>
@@ -303,7 +303,7 @@ const Supervisor = () => {
             </Card>
           </div>
         </TabsContent>
-        
+
         <TabsContent value="trends" className="space-y-6">
           <Card>
             <CardHeader>

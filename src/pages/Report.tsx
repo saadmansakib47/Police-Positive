@@ -4,7 +4,7 @@ import SEO from '@/components/SEO';
 import CrimeReportForm from '@/components/forms/CrimeReportForm';
 import { complaintsAPI } from '@/lib/api/complaints';
 import { CreateComplaintData } from '@/types/complaint';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Shield, AlertCircle } from 'lucide-react';
@@ -19,11 +19,11 @@ const Report = () => {
     setIsSubmitting(true);
     try {
       const complaint = await complaintsAPI.createComplaint(data);
-      
+
       toast.success('Report submitted successfully!', {
         description: `Case number: ${complaint.caseNumber}`,
       });
-      
+
       // Redirect to track page or complaint details
       navigate(`/track?case=${complaint.caseNumber}`);
     } catch (error: Error | unknown) {
@@ -37,12 +37,12 @@ const Report = () => {
 
   return (
     <div className="container mx-auto py-8">
-      <SEO 
-        title="Report Crime — Police Positive" 
-        description="Submit a detailed crime report with evidence and location information" 
-        canonical="/report" 
+      <SEO
+        title="Report Crime — Police Positive"
+        description="Submit a detailed crime report with evidence and location information"
+        canonical="/report"
       />
-      
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -55,8 +55,8 @@ const Report = () => {
             <Shield className="h-12 w-12 text-blue-600" />
           </div>
           <h1 className="text-3xl font-bold">Report a Crime</h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Submit a detailed report about criminal activity. Your information helps law enforcement 
+          <p className="text-muted-foreground container mx-auto">
+            Submit a detailed report about criminal activity. Your information helps law enforcement
             respond effectively and keep the community safe.
           </p>
         </div>
@@ -66,7 +66,7 @@ const Report = () => {
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              You can submit reports anonymously, but creating an account allows you to track 
+              You can submit reports anonymously, but creating an account allows you to track
               your complaints and receive updates.
             </AlertDescription>
           </Alert>

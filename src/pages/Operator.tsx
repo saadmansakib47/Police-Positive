@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  AlertTriangle, 
-  Clock, 
-  Users, 
-  MapPin, 
-  Filter, 
+import {
+  AlertTriangle,
+  Clock,
+  Users,
+  MapPin,
+  Filter,
   Search,
   CheckCircle,
   Eye,
@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { crimeAPI } from '@/lib/api/crime';
 import { CrimeReport } from '@/types/crime';
 import { useToast } from '@/hooks/use-toast';
@@ -108,33 +108,33 @@ const Operator = () => {
 
   const filterReports = (reports: CrimeReport[]) => {
     let filtered = reports;
-    
+
     if (searchTerm) {
-      filtered = filtered.filter(report => 
+      filtered = filtered.filter(report =>
         report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         report.caseNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         report.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
+
     if (priorityFilter !== 'all') {
       filtered = filtered.filter(report => report.priority === priorityFilter);
     }
-    
+
     if (statusFilter !== 'all') {
       filtered = filtered.filter(report => report.status === statusFilter);
     }
-    
+
     return filtered.sort((a, b) => {
       // Sort by priority first, then by creation date
       const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
       const aPriority = priorityOrder[a.priority];
       const bPriority = priorityOrder[b.priority];
-      
+
       if (aPriority !== bPriority) {
         return bPriority - aPriority;
       }
-      
+
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   };
@@ -163,7 +163,7 @@ const Operator = () => {
                 </Badge>
               )}
             </div>
-            
+
             <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
               <span>Case: {report.caseNumber}</span>
               <span>•</span>
@@ -180,41 +180,41 @@ const Operator = () => {
                 </>
               )}
             </div>
-            
+
             <div className="flex items-center gap-2 mb-2">
               <MapPin className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">{report.location.address}</span>
             </div>
-            
+
             <p className="text-sm text-muted-foreground line-clamp-2">
               {report.description}
             </p>
           </div>
-          
+
           <div className="flex flex-col gap-2 mt-4 lg:mt-0 lg:ml-4">
             <div className="flex items-center gap-2">
               <Badge className={statusColors[report.status]}>
                 <span className="capitalize">{report.status.replace('_', ' ')}</span>
               </Badge>
-              
+
               <Badge variant="outline" className={priorityColors[report.priority]}>
                 {report.priority.toUpperCase()}
               </Badge>
             </div>
-            
+
             <div className="flex gap-2">
               {showAssignButton && !report.assignedOfficer && (
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   variant="outline"
                   onClick={() => handleAssignToSelf(report.id)}
                 >
                   Assign to Me
                 </Button>
               )}
-              
-              <Select 
-                value={report.status} 
+
+              <Select
+                value={report.status}
                 onValueChange={(value) => handleStatusUpdate(report.id, value as CrimeReport['status'])}
               >
                 <SelectTrigger className="w-[140px] h-8">
@@ -229,7 +229,7 @@ const Operator = () => {
                   <SelectItem value="closed">Closed</SelectItem>
                 </SelectContent>
               </Select>
-              
+
               <Button asChild variant="outline" size="sm">
                 <Link to={`/track?case=${report.caseNumber}`}>
                   <Eye className="h-4 w-4" />
@@ -254,12 +254,12 @@ const Operator = () => {
 
   return (
     <div className="container mx-auto py-8">
-      <SEO 
-        title="Operator Dashboard — Police Positive" 
-        description="Police operator dashboard for case management" 
-        canonical="/operator" 
+      <SEO
+        title="Operator Dashboard — Police Positive"
+        description="Police operator dashboard for case management"
+        canonical="/operator"
       />
-      
+
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Operator Dashboard</h1>
@@ -280,7 +280,7 @@ const Operator = () => {
             <p className="text-xs text-muted-foreground">All active cases</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
@@ -291,7 +291,7 @@ const Operator = () => {
             <p className="text-xs text-muted-foreground">Awaiting assignment</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Urgent Cases</CardTitle>
@@ -302,7 +302,7 @@ const Operator = () => {
             <p className="text-xs text-muted-foreground">Require immediate attention</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">My Active Cases</CardTitle>
@@ -362,7 +362,7 @@ const Operator = () => {
           <TabsTrigger value="my-cases">My Cases ({myReports.length})</TabsTrigger>
           <TabsTrigger value="urgent">Urgent ({stats.urgent})</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="all" className="space-y-4">
           {filterReports(allReports).length === 0 ? (
             <Card>
@@ -378,7 +378,7 @@ const Operator = () => {
             ))
           )}
         </TabsContent>
-        
+
         <TabsContent value="my-cases" className="space-y-4">
           {filterReports(myReports).length === 0 ? (
             <Card>
@@ -394,7 +394,7 @@ const Operator = () => {
             ))
           )}
         </TabsContent>
-        
+
         <TabsContent value="urgent" className="space-y-4">
           {filterReports(allReports.filter(r => r.priority === 'urgent')).length === 0 ? (
             <Card>

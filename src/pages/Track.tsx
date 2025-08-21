@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { 
-  Search, MapPin, Clock, User, FileText, 
+import {
+  Search, MapPin, Clock, User, FileText,
   CheckCircle, AlertCircle, Eye
 } from 'lucide-react';
 import SEO from '@/components/SEO';
@@ -9,11 +9,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-// import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { complaintsAPI } from '@/lib/api/complaints';
-import { Complaint, TimelineEvent } from '@/types/complaint';
-// import { useToast } from '@/hooks/use-toast';
+import { Complaint, TimelineEvent, FileEvidence } from '@/types/complaint';
+import { PhotoProvider, PhotoView } from 'react-photo-view';
+import 'react-photo-view/dist/react-photo-view.css';
 
 const Track = () => {
   const [searchParams] = useSearchParams();
@@ -22,7 +22,6 @@ const Track = () => {
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  // const { toast } = useToast();
 
   useEffect(() => {
     if (searchParams.get('case')) {
@@ -31,41 +30,41 @@ const Track = () => {
   }, []);
 
   const handleSearch = async () => {
-  if (!searchQuery.trim()) {
-    setError('Please enter a case number or phone number');
-    return;
-  }
-
-  setLoading(true);
-  setError('');
-  setComplaint(null);
-  setTimeline([]);
-
-  try {
-    const result = await complaintsAPI.trackComplaint(searchQuery);
-
-    if (!result) {
-      setError('Case not found or access denied');
-      setComplaint(null);
-      setTimeline([]);
+    if (!searchQuery.trim()) {
+      setError('Please enter a case number or phone number');
       return;
     }
 
-    // result is already of type Complaint
-    setComplaint(result);
-    setTimeline(result.timeline ?? []);
-  } catch (error: Error | unknown) {
-    setError(error instanceof Error ? error.message : 'Case not found or access denied');
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    setError('');
+    setComplaint(null);
+    setTimeline([]);
 
+    try {
+      const result = await complaintsAPI.trackComplaint(searchQuery);
+
+      if (!result) {
+        setError('Case not found or access denied');
+        setComplaint(null);
+        setTimeline([]);
+        return;
+      }
+
+      setComplaint(result);
+      console.log('Complaint data:', result);
+
+      setTimeline(result.timeline ?? []);
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Case not found or access denied');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'assigned': return 'bg-blue-100 text-blue-800';
+      case 'under_review': return 'bg-blue-100 text-blue-800';
       case 'investigating': return 'bg-purple-100 text-purple-800';
       case 'resolved': return 'bg-green-100 text-green-800';
       case 'closed': return 'bg-gray-100 text-gray-800';
@@ -93,14 +92,28 @@ const Track = () => {
     }
   };
 
+  const isImageFile = (file: FileEvidence) => {
+    return file.type === 'image';
+  };
+
+  const getFileIcon = (type: string) => {
+    switch (type) {
+      case 'image': return '📷';
+      case 'video': return '📹';
+      case 'audio': return '🎵';
+      case 'document': return '📄';
+      default: return '📁';
+    }
+  };
+
   return (
     <div className="container mx-auto py-8">
-      <SEO 
-        title="Track Complaint — Police Positive" 
-        description="Track the status of your complaint or case" 
-        canonical="/track" 
+      <SEO
+        title="Track Complaint — Police Positive"
+        description="Track the status of your complaint or case"
+        canonical="/track"
       />
-      
+
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Track Your Complaint</h1>
@@ -126,7 +139,7 @@ const Track = () => {
               {loading ? 'Searching...' : 'Track'}
             </Button>
           </div>
-          
+
           {error && (
             <Alert className="mt-4" variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -208,7 +221,7 @@ const Track = () => {
                         Assigned Officer
                       </h4>
                       <div className="text-sm text-muted-foreground">
-                        <p>{complaint.assignedOfficer.firstName ?? ""} {complaint.assignedOfficer.lastName ?? ""}</p>
+                        <p>{complaint.assignedOfficer.name || `${complaint.assignedOfficer.firstName ?? ""} ${complaint.assignedOfficer.lastName ?? ""}`}</p>
                         <p>Badge: {complaint.assignedOfficer.badgeNumber ?? "N/A"}</p>
                       </div>
                     </div>
@@ -216,27 +229,43 @@ const Track = () => {
                 </div>
               </div>
 
-              {complaint.evidence?.length > 0 && (
+              {complaint.evidence?.files && complaint.evidence.files.length > 0 && (
                 <div className="mt-6">
                   <h4 className="font-medium mb-3">Evidence Files</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {complaint.evidence.map((file) => (
-                      <div key={file.id} className="flex items-center justify-between p-3 border rounded">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
-                          <div>
-                            <p className="text-sm font-medium">{file.name ?? "Untitled"}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {file.type ?? "unknown"} • {(file.size ?? 0 / 1024 / 1024).toFixed(2)} MB
-                            </p>
+                  <PhotoProvider>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {complaint.evidence.files.map((file) => (
+                        <div key={file.id} className="flex items-center justify-between p-3 border rounded">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{getFileIcon(file.type)}</span>
+                            <div>
+                              <p className="text-sm font-medium">{file.name ?? "Untitled"}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {file.type ?? "unknown"} • {file.size ? (file.size / 1024 / 1024).toFixed(2) : "0"} MB
+                              </p>
+                            </div>
                           </div>
+                          {isImageFile(file) ? (
+                            <PhotoView src={file.url}>
+                              <div className="cursor-pointer">
+                                <img
+                                  src={file.url}
+                                  alt={file.name}
+                                  className="w-16 h-16 object-cover rounded border"
+                                />
+                              </div>
+                            </PhotoView>
+                          ) : (
+                            <Button size="sm" variant="outline" asChild>
+                              <a href={file.url} target="_blank" rel="noopener noreferrer">
+                                <Eye className="h-3 w-3" />
+                              </a>
+                            </Button>
+                          )}
                         </div>
-                        <Button size="sm" variant="outline">
-                          <Eye className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  </PhotoProvider>
                 </div>
               )}
             </CardContent>
@@ -286,7 +315,6 @@ const Track = () => {
         </div>
       )}
 
-
       {/* Help Section */}
       <Card className="mt-8">
         <CardHeader>
@@ -303,7 +331,7 @@ const Track = () => {
                 Contact Support
               </Button>
             </div>
-            
+
             <div className="text-center">
               <h4 className="font-medium mb-2">Update Required?</h4>
               <p className="text-sm text-muted-foreground mb-3">
@@ -313,7 +341,7 @@ const Track = () => {
                 Submit Update
               </Button>
             </div>
-            
+
             <div className="text-center">
               <h4 className="font-medium mb-2">Emergency?</h4>
               <p className="text-sm text-muted-foreground mb-3">

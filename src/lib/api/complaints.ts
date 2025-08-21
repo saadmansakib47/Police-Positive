@@ -1,4 +1,4 @@
-import { Complaint, CreateComplaintData, ComplaintFilters, DashboardStats } from '@/types/complaint';
+import { Complaint, CreateComplaintData, ComplaintFilters, DashboardStats, TimelineEvent, FileEvidence } from '@/types/complaint';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -134,7 +134,48 @@ class ComplaintsAPI {
     const encodedCaseNumber = encodeURIComponent(caseNumber.trim());
 
     try {
-      return this.request<Complaint | null>(`/complaints/track/${encodedCaseNumber}`);
+      const response = await this.request<{
+        complaint: Complaint | null;
+        timeline: TimelineEvent[];
+        evidence: FileEvidence[];
+        error: string | null;
+      }>(`/complaints/track/${encodedCaseNumber}`);
+
+      if (response.error || !response.complaint) {
+        throw new Error(response.error || 'Case not found');
+      }
+
+      // Ensure the complaint object has all required properties
+      const complaint: Complaint = {
+        id: response.complaint.id || '',
+        caseNumber: response.complaint.caseNumber || '',
+        type: response.complaint.type || 'GD',
+        category: response.complaint.category || 'other',
+        title: response.complaint.title || '',
+        description: response.complaint.description || '',
+        location: {
+          address: response.complaint.location?.address || '',
+          lat: response.complaint.location?.lat || 0,
+          lng: response.complaint.location?.lng || 0,
+        },
+        reporterInfo: response.complaint.reporterInfo || {
+          isAnonymous: false,
+          phone: ''
+        },
+        status: response.complaint.status || 'pending',
+        priority: response.complaint.priority || 'medium',
+        assignedOfficer: response.complaint.assignedOfficer,
+        evidence: {
+          files: response.evidence || response.complaint.evidence?.files || [],
+          notes: response.complaint.evidence?.notes || [],
+        },
+        timeline: response.timeline || [],
+        createdAt: response.complaint.createdAt || new Date().toISOString(),
+        updatedAt: response.complaint.updatedAt || new Date().toISOString(),
+        createdBy: response.complaint.createdBy || '',
+      };
+
+      return complaint;
     } catch (err) {
       console.error('Error tracking complaint:', err);
       return null;

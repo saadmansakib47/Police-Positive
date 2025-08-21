@@ -26,7 +26,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
         ...state,
         user: action.payload.user,
         token: action.payload.token,
-        isAuthenticated: true,
+        isAuthenticated: true, // Set to true when we have a user
         isLoading: false,
       };
     case 'AUTH_FAILURE':
@@ -34,7 +34,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
         ...state,
         user: null,
         token: null,
-        isAuthenticated: false,
+        isAuthenticated: false, // Set to false when auth fails
         isLoading: false,
       };
     case 'LOGOUT':
@@ -69,7 +69,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       dispatch({ type: 'AUTH_START' });
       const response = await authAPI.login(credentials);
 
-      console.log('Login response:', response);
       localStorage.setItem('token', response.token);
       dispatch({ type: 'AUTH_SUCCESS', payload: response });
 
@@ -86,7 +85,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       dispatch({ type: 'AUTH_START' });
       const response = await authAPI.register(data);
 
-      console.log('Registration response:', response);
       localStorage.setItem('token', response.token);
       dispatch({ type: 'AUTH_SUCCESS', payload: response });
 
@@ -112,10 +110,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      dispatch({ type: 'AUTH_START' });
       const user = await authAPI.verifyToken(token);
       dispatch({ type: 'AUTH_SUCCESS', payload: { user, token } });
     } catch (error) {
+      console.error('Token verification failed:', error);
       localStorage.removeItem('token');
       dispatch({ type: 'AUTH_FAILURE' });
     }
@@ -140,10 +138,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+export { AuthContext }

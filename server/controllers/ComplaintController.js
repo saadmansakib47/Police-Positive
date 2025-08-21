@@ -444,19 +444,23 @@ const trackComplaint = async (req, res) => {
       complaintId: complaint._id,
     }).lean()
 
+    // Transform complaint to match frontend interface
     const transformedComplaint = {
       id: complaint._id.toString(),
       caseNumber: complaint.caseNumber || "",
-      type: complaint.type,
-      category: complaint.category,
-      title: complaint.title,
-      description: complaint.description,
+      type: complaint.type || "GD",
+      category: complaint.category || "other",
+      title: complaint.title || "",
+      description: complaint.description || "",
       location: {
-        address: complaint.location.address,
-        lat: complaint.location.lat,
-        lng: complaint.location.lng,
+        address: complaint.location?.address || "",
+        lat: complaint.location?.lat || 0,
+        lng: complaint.location?.lng || 0,
       },
-      reporterInfo: complaint.reporterInfo,
+      reporterInfo: complaint.reporterInfo || {
+        isAnonymous: false,
+        phone: "",
+      },
       status: complaint.status || "pending",
       priority: complaint.priority || "medium",
       assignedOfficer: complaint.assignedOfficer
@@ -465,16 +469,50 @@ const trackComplaint = async (req, res) => {
             name: `${complaint.assignedOfficer.firstName || ""} ${
               complaint.assignedOfficer.lastName || ""
             }`.trim(),
+            firstName: complaint.assignedOfficer.firstName || "",
+            lastName: complaint.assignedOfficer.lastName || "",
             badgeNumber: complaint.assignedOfficer.badgeNumber || "",
           }
         : undefined,
       evidence: {
-        files: [],
-        notes: [],
+        files: (evidence || []).map((f) => ({
+          id: f._id.toString(),
+          name: f.originalName || "Untitled",
+          type: getFileType(f.mimetype),
+          url: f.filename ? `/server/uploads/${f.filename}` : "",
+          size: f.size || 0,
+          uploadedAt: f.createdAt
+            ? f.createdAt.toISOString()
+            : new Date().toISOString(),
+        })),
+        notes: complaint.notes
+          ? complaint.notes.map((note) => ({
+              text: note.text || "",
+              createdAt: note.createdAt
+                ? note.createdAt.toISOString()
+                : new Date().toISOString(),
+              by: note.by || null,
+            }))
+          : [],
       },
-      timeline: [],
-      createdAt: complaint.createdAt.toISOString(),
-      updatedAt: complaint.updatedAt.toISOString(),
+      timeline: (timeline || []).map((t) => ({
+        id: t._id.toString(),
+        type: t.type || "updated",
+        description: t.description || "",
+        timestamp: t.createdAt
+          ? t.createdAt.toISOString()
+          : new Date().toISOString(),
+        userId: t.userId ? t.userId._id.toString() : null,
+        userName: t.userId
+          ? `${t.userId.firstName || ""} ${t.userId.lastName || ""}`.trim()
+          : "System",
+      })),
+      createdAt: complaint.createdAt
+        ? complaint.createdAt.toISOString()
+        : new Date().toISOString(),
+      updatedAt: complaint.updatedAt
+        ? complaint.updatedAt.toISOString()
+        : new Date().toISOString(),
       createdBy: complaint.createdBy
         ? complaint.createdBy._id.toString()
         : null,
@@ -483,24 +521,8 @@ const trackComplaint = async (req, res) => {
     res.json({
       error: null,
       complaint: transformedComplaint,
-      timeline: (timeline || []).map((t) => ({
-        id: t._id.toString(),
-        type: t.type || "updated",
-        description: t.description || "",
-        timestamp: t.createdAt.toISOString(),
-        userId: t.userId ? t.userId._id.toString() : null,
-        userName: t.userId
-          ? `${t.userId.firstName || ""} ${t.userId.lastName || ""}`.trim()
-          : "System",
-      })),
-      evidence: (evidence || []).map((f) => ({
-        id: f._id.toString(),
-        name: f.originalName || "Untitled",
-        type: getFileType(f.mimetype),
-        url: f.filename ? `/uploads/${f.filename}` : "",
-        size: f.size || 0,
-        uploadedAt: f.createdAt.toISOString(),
-      })),
+      timeline: transformedComplaint.timeline,
+      evidence: transformedComplaint.evidence.files,
     })
   } catch (err) {
     console.error("Error tracking complaint:", err)
