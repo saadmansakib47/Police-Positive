@@ -1,4 +1,4 @@
-import TimelineEvent from "../models/TimelineEvent"
+import TimelineEvent from "../models/TimelineEvent.js"
 
 export const generateCaseNumber = () => {
   const year = new Date().getFullYear()

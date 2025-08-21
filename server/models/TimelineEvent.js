@@ -1,3 +1,5 @@
+import mongoose from "mongoose"
+
 const timelineEventSchema = new mongoose.Schema(
   {
     complaintId: {

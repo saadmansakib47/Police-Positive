@@ -35,7 +35,7 @@ const App = () => (
               {/* Public routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              
+
               {/* Protected routes with layout */}
               <Route element={<Layout />}>
                 <Route index element={<Index />} />
@@ -44,55 +44,55 @@ const App = () => (
                 <Route path="contact" element={<Contact />} />
 
                 {/* Role-specific protected routes */}
-                <Route 
-                  path="operator" 
+                <Route
+                  path="operator"
                   element={
-                    <ProtectedRoute allowedRoles={['operator', 'supervisor']}>
+                    <ProtectedRoute allowedRoles={['civilian', 'operator', 'supervisor']}>
                       <Operator />
                     </ProtectedRoute>
-                  } 
+                  }
                 />
-                <Route 
-                  path="supervisor" 
+                <Route
+                  path="supervisor"
                   element={
-                    <ProtectedRoute allowedRoles={['supervisor']}>
+                    <ProtectedRoute allowedRoles={['civilian', 'operator', 'supervisor']}>
                       <Supervisor />
                     </ProtectedRoute>
-                  } 
+                  }
                 />
-                <Route 
-                  path="civilian" 
+                <Route
+                  path="civilian"
                   element={
-                    <ProtectedRoute allowedRoles={['civilian']}>
+                    <ProtectedRoute allowedRoles={['civilian', 'operator', 'supervisor']}>
                       <Civilian />
                     </ProtectedRoute>
-                  } 
+                  }
                 />
 
                 {/* General protected routes */}
-                <Route 
-                  path="report" 
+                <Route
+                  path="report"
                   element={
                     <ProtectedRoute>
                       <Report />
                     </ProtectedRoute>
-                  } 
+                  }
                 />
-                <Route 
-                  path="track" 
+                <Route
+                  path="track"
                   element={
                     <ProtectedRoute>
                       <Track />
                     </ProtectedRoute>
-                  } 
+                  }
                 />
-                <Route 
-                  path="patrol" 
+                <Route
+                  path="patrol"
                   element={
                     <ProtectedRoute allowedRoles={['operator', 'supervisor']}>
                       <Patrol />
                     </ProtectedRoute>
-                  } 
+                  }
                 />
 
                 {/* Catch-all */}

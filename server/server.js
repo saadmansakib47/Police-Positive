@@ -3,6 +3,9 @@ import cors from "cors"
 import multer from "multer"
 import mongoose from "mongoose"
 import dotenv from "dotenv"
+import path from "path"
+import fs from "fs"
+import { fileURLToPath } from "url"
 
 dotenv.config()
 
@@ -31,6 +34,18 @@ app.use(
 )
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+
+// ========================
+// Uploads Directory
+// ========================
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+const uploadsDir = path.join(__dirname, "uploads")
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true })
+}
+
 app.use("/uploads", express.static(uploadsDir))
 
 // ========================

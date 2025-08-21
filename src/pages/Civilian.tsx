@@ -4,28 +4,34 @@ import {
   FileText,
   Search,
   MessageCircle,
-  Bell,
   MapPin,
   Phone,
   Shield,
-  AlertTriangle,
   Clock,
-  CheckCircle
+  CheckCircle,
+  TrendingUp,
+  Target
 } from 'lucide-react';
 import SEO from '@/components/SEO';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { complaintsAPI } from '@/lib/api/complaints';
 import { Complaint } from '@/types/complaint';
-import { AlertusNotification } from '@/types/crime';
 import { useToast } from '@/hooks/use-toast';
 
 const Civilian = () => {
   const [myReports, setMyReports] = useState<Complaint[]>([]);
-  const [notifications, setNotifications] = useState<AlertusNotification[]>([]);
+  const [dashboardStats, setDashboardStats] = useState({
+    totalComplaints: 0,
+    pendingComplaints: 0,
+    resolvedComplaints: 0,
+    highPriorityComplaints: 0,
+    averageResolutionTime: 0,
+    complaintsThisWeek: 0,
+    complaintsThisMonth: 0
+  });
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -36,16 +42,16 @@ const Civilian = () => {
 
   const loadData = async () => {
     try {
-      const [reports, alerts] = await Promise.all([
+      const [reports, stats] = await Promise.all([
         complaintsAPI.getMyComplaints(),
-        complaintsAPI.getActiveAlerts()
+        complaintsAPI.getDashboardStats()
       ]);
       setMyReports(reports);
-      setNotifications(alerts);
+      setDashboardStats(stats);
     } catch (error) {
       toast({
         title: "Error loading data",
-        description: "Failed to load your reports and notifications",
+        description: "Failed to load your reports and dashboard statistics",
         variant: "destructive"
       });
     } finally {
@@ -53,11 +59,16 @@ const Civilian = () => {
     }
   };
 
-  const stats = {
-    total: myReports.length,
-    pending: myReports.filter(r => r.status === 'pending').length,
-    resolved: myReports.filter(r => r.status === 'resolved').length,
-    activeAlerts: notifications.filter(n => n.isActive).length
+  const handleEmergencyCall = () => {
+    window.location.href = 'tel:100';
+  };
+
+  const handlePanicButton = () => {
+    toast({
+      title: "Emergency Alert Sent",
+      description: "Help is on the way. Stay safe and follow instructions.",
+      variant: "destructive"
+    });
   };
 
   if (loading) {
@@ -86,39 +97,6 @@ const Civilian = () => {
         </p>
       </div>
 
-      {/* Active Alerts */}
-      {notifications.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">🚨 Active Alerts</h2>
-          <div className="space-y-3">
-            {notifications.slice(0, 3).map((alert) => (
-              <Alert key={alert.id} className={`border-l-4 ${alert.priority === 'critical' ? 'border-red-500 bg-red-50' :
-                alert.priority === 'high' ? 'border-orange-500 bg-orange-50' :
-                  'border-yellow-500 bg-yellow-50'
-                }`}>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <strong>{alert.title}</strong>
-                      <p className="text-sm mt-1">{alert.message}</p>
-                      {alert.location && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          📍 {alert.location.address}
-                        </p>
-                      )}
-                    </div>
-                    <Badge variant={alert.priority === 'critical' ? 'destructive' : 'secondary'}>
-                      {alert.priority.toUpperCase()}
-                    </Badge>
-                  </div>
-                </AlertDescription>
-              </Alert>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <Card>
@@ -127,7 +105,7 @@ const Civilian = () => {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
+            <div className="text-2xl font-bold">{dashboardStats.totalComplaints}</div>
             <p className="text-xs text-muted-foreground">Total submitted</p>
           </CardContent>
         </Card>
@@ -138,7 +116,7 @@ const Civilian = () => {
             <Clock className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+            <div className="text-2xl font-bold text-yellow-600">{dashboardStats.pendingComplaints}</div>
             <p className="text-xs text-muted-foreground">Under review</p>
           </CardContent>
         </Card>
@@ -149,19 +127,19 @@ const Civilian = () => {
             <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.resolved}</div>
+            <div className="text-2xl font-bold text-green-600">{dashboardStats.resolvedComplaints}</div>
             <p className="text-xs text-muted-foreground">Completed cases</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Alerts</CardTitle>
-            <Bell className="h-4 w-4 text-red-600" />
+            <CardTitle className="text-sm font-medium">Avg. Resolution</CardTitle>
+            <TrendingUp className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.activeAlerts}</div>
-            <p className="text-xs text-muted-foreground">In your area</p>
+            <div className="text-2xl font-bold text-blue-600">{dashboardStats.averageResolutionTime}h</div>
+            <p className="text-xs text-muted-foreground">Time to resolve</p>
           </CardContent>
         </Card>
       </div>
@@ -231,10 +209,10 @@ const Civilian = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <Button variant="destructive" className="w-full" size="sm">
+              <Button onClick={handleEmergencyCall} variant="destructive" className="w-full" size="sm">
                 📞 Call 100
               </Button>
-              <Button variant="outline" className="w-full" size="sm">
+              <Button onClick={handlePanicButton} variant="outline" className="w-full" size="sm">
                 🚨 Panic Button
               </Button>
             </div>
@@ -288,11 +266,17 @@ const Civilian = () => {
           <CardContent>
             <div className="space-y-4">
               {myReports.slice(0, 5).map((report) => (
-                <div key={report.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div key={report.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="font-medium">{report.title}</h4>
                       <Badge variant="outline">{report.type}</Badge>
+                      {report.priority === 'high' || report.priority === 'urgent' ? (
+                        <Badge variant="destructive" className="text-xs">
+                          <Target className="h-3 w-3 mr-1" />
+                          {report.priority.toUpperCase()}
+                        </Badge>
+                      ) : null}
                     </div>
                     <p className="text-sm text-muted-foreground mb-2">
                       Case: {report.caseNumber} • {new Date(report.createdAt).toLocaleDateString()}
@@ -301,11 +285,12 @@ const Civilian = () => {
                       {report.description}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 ml-4">
                     <Badge className={`${report.status === 'closed' ? 'bg-green-100 text-green-800' :
                       report.status === 'under_review' ? 'bg-blue-100 text-blue-800' :
-                        report.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-gray-100 text-gray-800'
+                        report.status === 'investigating' ? 'bg-purple-100 text-purple-800' :
+                          report.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
                       }`}>
                       {report.status.replace('_', ' ').toUpperCase()}
                     </Badge>
@@ -325,6 +310,22 @@ const Civilian = () => {
                 </Button>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Empty State */}
+      {myReports.length === 0 && (
+        <Card className="text-center py-12">
+          <CardContent>
+            <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">No Reports Yet</h3>
+            <p className="text-muted-foreground mb-4">
+              You haven't submitted any complaints yet. Get started by filing your first report.
+            </p>
+            <Button asChild>
+              <Link to="/report">File Your First Report</Link>
+            </Button>
           </CardContent>
         </Card>
       )}

@@ -1,4 +1,4 @@
-import bcrypt from "bcrypt"
+import bcrypt from "bcryptjs"
 import User from "../models/User.js"
 import generateToken from "../utils/generateToken.js"
 
@@ -34,8 +34,11 @@ const register = async (req, res) => {
     })
     await user.save()
 
+    const userResponse = user.toObject()
+    delete userResponse.password
+
     const token = generateToken(user)
-    res.status(201).json({ user, token })
+    res.status(201).json({ user: userResponse, token })
   } catch (error) {
     console.error(error)
     res.status(500).json({ message: "Server error" })
@@ -55,8 +58,11 @@ const login = async (req, res) => {
     if (!isValidPassword)
       return res.status(401).json({ message: "Invalid credentials" })
 
+    const userResponse = user.toObject()
+    delete userResponse.password
+
     const token = generateToken(user)
-    res.json({ user, token })
+    res.json({ user: userResponse, token })
   } catch (error) {
     res.status(500).json({ message: "Server error" })
   }

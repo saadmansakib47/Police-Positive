@@ -1,3 +1,5 @@
+import mongoose from "mongoose"
+
 const evidenceFileSchema = new mongoose.Schema(
   {
     complaintId: {

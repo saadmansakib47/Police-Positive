@@ -1,3 +1,5 @@
+import mongoose from "mongoose"
+
 const complaintSchema = new mongoose.Schema(
   {
     caseNumber: { type: String, unique: true, required: true },

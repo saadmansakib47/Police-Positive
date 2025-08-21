@@ -68,10 +68,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       dispatch({ type: 'AUTH_START' });
       const response = await authAPI.login(credentials);
-      
+
+      console.log('Login response:', response);
       localStorage.setItem('token', response.token);
       dispatch({ type: 'AUTH_SUCCESS', payload: response });
-      
+
       toast.success('Login successful!');
     } catch (error: Error | unknown) {
       dispatch({ type: 'AUTH_FAILURE' });
@@ -84,10 +85,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       dispatch({ type: 'AUTH_START' });
       const response = await authAPI.register(data);
-      
+
+      console.log('Registration response:', response);
       localStorage.setItem('token', response.token);
       dispatch({ type: 'AUTH_SUCCESS', payload: response });
-      
+
       toast.success('Registration successful!');
     } catch (error: Error | unknown) {
       dispatch({ type: 'AUTH_FAILURE' });
@@ -110,6 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
+      dispatch({ type: 'AUTH_START' });
       const user = await authAPI.verifyToken(token);
       dispatch({ type: 'AUTH_SUCCESS', payload: { user, token } });
     } catch (error) {
