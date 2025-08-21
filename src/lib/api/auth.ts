@@ -34,21 +34,11 @@ class AuthAPI {
   }
 
   async register(data: RegisterData): Promise<AuthResponse> {
-    // Handle unknown form sending 'name' instead of firstName/lastName
-    let firstName = data.firstName;
-    let lastName = data.lastName;
-
-    if (!firstName && data.name) {
-      const [f, ...rest] = data.name.split(' ');
-      firstName = f;
-      lastName = rest.join(' ') || '';
-    }
-
     const body = {
       email: data.email,
       password: data.password,
-      firstName,
-      lastName,
+      firstName: data.firstName,
+      lastName: data.lastName,
       role: data.role,
       badgeNumber: data.badgeNumber,
       department: data.department,

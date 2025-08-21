@@ -4,11 +4,10 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 class ComplaintsAPI {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    // Ensure endpoint always starts with '/'
     const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
     const token = localStorage.getItem('token');
 
-    const headers: Record<string, string> = {
+    const headers: any = {
       ...(token && { Authorization: `Bearer ${token}` }),
       ...options.headers,
     };

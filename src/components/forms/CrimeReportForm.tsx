@@ -74,7 +74,7 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
         address: '',
       },
       reporterInfo: {
-        name: user?.name || '',
+        name: user?.firstName || '',
         phone: user?.phone || '',
         email: user?.email || '',
         isAnonymous: false,
@@ -89,12 +89,12 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     const validFiles = files.filter(file => {
-      const isValidType = file.type.startsWith('image/') || 
-                         file.type.startsWith('video/') || 
-                         file.type.startsWith('audio/') ||
-                         file.type === 'application/pdf';
+      const isValidType = file.type.startsWith('image/') ||
+        file.type.startsWith('video/') ||
+        file.type.startsWith('audio/') ||
+        file.type === 'application/pdf';
       const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB limit
-      
+
       if (!isValidType) {
         toast.error(`${file.name} is not a supported file type`);
         return false;
@@ -105,7 +105,7 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
       }
       return true;
     });
-    
+
     setSelectedFiles(prev => [...prev, ...validFiles].slice(0, 5)); // Max 5 files
   };
 
@@ -143,7 +143,7 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
           files: selectedFiles,
         },
       };
-      
+
       await onSubmit({
         type: data.type,
         category: data.category,
@@ -163,7 +163,7 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
           files: selectedFiles
         }
       });
-      
+
       // Reset form
       form.reset();
       setSelectedFiles([]);
@@ -284,9 +284,9 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
                   <FormItem>
                     <FormLabel>Incident Title</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="Brief title describing the incident" 
-                        {...field} 
+                      <Input
+                        placeholder="Brief title describing the incident"
+                        {...field}
                       />
                     </FormControl>
                     <FormDescription>
@@ -305,10 +305,10 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
                   <FormItem>
                     <FormLabel>Detailed Description</FormLabel>
                     <FormControl>
-                      <Textarea 
+                      <Textarea
                         placeholder="Provide a detailed description of what happened, when it occurred, and any other relevant information..."
                         className="min-h-[120px] resize-none"
-                        {...field} 
+                        {...field}
                       />
                     </FormControl>
                     <FormDescription>
@@ -328,9 +328,9 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
                     <FormLabel>Location</FormLabel>
                     <div className="flex gap-2">
                       <FormControl>
-                        <Input 
-                          placeholder="Enter the location where the incident occurred" 
-                          {...field} 
+                        <Input
+                          placeholder="Enter the location where the incident occurred"
+                          {...field}
                         />
                       </FormControl>
                       <Button
@@ -354,7 +354,7 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
               {/* Reporter Information */}
               <div className="space-y-4 p-4 border rounded-lg">
                 <h3 className="font-semibold">Reporter Information</h3>
-                
+
                 <FormField
                   control={form.control}
                   name="reporterInfo.isAnonymous"
@@ -393,7 +393,7 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="reporterInfo.email"
@@ -436,7 +436,7 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
                     Upload photos, videos, audio recordings, or documents related to the incident
                   </p>
                 </div>
-                
+
                 <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6">
                   <div className="text-center">
                     <Upload className="mx-auto h-12 w-12 text-muted-foreground/50" />
@@ -493,15 +493,15 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
 
               {/* Submit Buttons */}
               <div className="flex gap-4 pt-6">
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   disabled={isLoading}
                   className="flex-1"
                 >
                   {isLoading ? 'Submitting...' : `Submit ${reportType}`}
                 </Button>
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant="outline"
                   onClick={() => {
                     form.reset();

@@ -28,10 +28,10 @@ export interface RegisterData {
   firstName: string;
   lastName: string;
   role: 'civilian' | 'operator' | 'supervisor' | 'patrol';
+  address?: string; // optional frontend-only
   badgeNumber?: string;
   department?: string;
   phone?: string;
-  address?: string; // optional frontend-only
 }
 
 export interface AuthResponse {

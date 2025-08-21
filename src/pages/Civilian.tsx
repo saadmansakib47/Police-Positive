@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  FileText, 
-  Search, 
-  MessageCircle, 
-  Bell, 
-  MapPin, 
-  Phone, 
+import {
+  FileText,
+  Search,
+  MessageCircle,
+  Bell,
+  MapPin,
+  Phone,
   Shield,
   AlertTriangle,
   Clock,
@@ -37,7 +37,7 @@ const Civilian = () => {
   const loadData = async () => {
     try {
       const [reports, alerts] = await Promise.all([
-        complaintsAPI.getMyReports(),
+        complaintsAPI.getMyComplaints(),
         complaintsAPI.getActiveAlerts()
       ]);
       setMyReports(reports);
@@ -72,17 +72,17 @@ const Civilian = () => {
 
   return (
     <div className="container mx-auto py-8">
-      <SEO 
-        title="Civilian Portal — Police Positive" 
-        description="Citizen portal for reporting crimes and tracking complaints" 
-        canonical="/civilian" 
+      <SEO
+        title="Civilian Portal — Police Positive"
+        description="Citizen portal for reporting crimes and tracking complaints"
+        canonical="/civilian"
       />
-      
+
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Civilian Portal</h1>
         <p className="text-muted-foreground">
-          Welcome, {user?.name}. Report incidents, track your complaints, and stay informed.
+          Welcome, {user?.firstName}. Report incidents, track your complaints, and stay informed.
         </p>
       </div>
 
@@ -92,11 +92,10 @@ const Civilian = () => {
           <h2 className="text-xl font-semibold mb-4">🚨 Active Alerts</h2>
           <div className="space-y-3">
             {notifications.slice(0, 3).map((alert) => (
-              <Alert key={alert.id} className={`border-l-4 ${
-                alert.priority === 'critical' ? 'border-red-500 bg-red-50' :
+              <Alert key={alert.id} className={`border-l-4 ${alert.priority === 'critical' ? 'border-red-500 bg-red-50' :
                 alert.priority === 'high' ? 'border-orange-500 bg-orange-50' :
-                'border-yellow-500 bg-yellow-50'
-              }`}>
+                  'border-yellow-500 bg-yellow-50'
+                }`}>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
                   <div className="flex justify-between items-start">
@@ -132,7 +131,7 @@ const Civilian = () => {
             <p className="text-xs text-muted-foreground">Total submitted</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending</CardTitle>
@@ -143,7 +142,7 @@ const Civilian = () => {
             <p className="text-xs text-muted-foreground">Under review</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Resolved</CardTitle>
@@ -154,7 +153,7 @@ const Civilian = () => {
             <p className="text-xs text-muted-foreground">Completed cases</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Alerts</CardTitle>
@@ -303,12 +302,11 @@ const Civilian = () => {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge className={`${
-                      report.status === 'resolved' ? 'bg-green-100 text-green-800' :
-                      report.status === 'investigating' ? 'bg-blue-100 text-blue-800' :
-                      report.status === 'assigned' ? 'bg-purple-100 text-purple-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
+                    <Badge className={`${report.status === 'closed' ? 'bg-green-100 text-green-800' :
+                      report.status === 'under_review' ? 'bg-blue-100 text-blue-800' :
+                        report.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
+                      }`}>
                       {report.status.replace('_', ' ').toUpperCase()}
                     </Badge>
                     <Button asChild variant="outline" size="sm">

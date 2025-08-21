@@ -94,7 +94,8 @@ const Register = () => {
       await registerUser({
         email: registerData.email!,
         password: registerData.password!,
-        name: registerData.name!,
+        firstName: registerData.name.split(' ')[0],
+        lastName: registerData.name.split(' ').slice(1).join(' '),
         role: registerData.role,
         address: registerData.address,
         badgeNumber: registerData.badgeNumber,
@@ -109,10 +110,10 @@ const Register = () => {
 
   return (
     <>
-      <SEO 
-        title="Register - Police Positive" 
-        description="Create your Police Positive account" 
-        canonical="/register" 
+      <SEO
+        title="Register - Police Positive"
+        description="Create your Police Positive account"
+        canonical="/register"
       />
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-8">
         <Card className="w-full max-w-2xl">
@@ -152,7 +153,7 @@ const Register = () => {
                                 />
                                 <Label
                                   htmlFor={option.value}
-                                  className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                                  className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-gray-100 peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                                 >
                                   <Icon className="mb-3 h-6 w-6" />
                                   <div className="text-center">
@@ -187,7 +188,7 @@ const Register = () => {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="email"
@@ -221,7 +222,7 @@ const Register = () => {
                               type="button"
                               variant="ghost"
                               size="sm"
-                              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent hover:text-muted-foreground"
                               onClick={() => setShowPassword(!showPassword)}
                             >
                               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -232,7 +233,7 @@ const Register = () => {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="confirmPassword"
@@ -250,7 +251,7 @@ const Register = () => {
                               type="button"
                               variant="ghost"
                               size="sm"
-                              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent hover:text-muted-foreground"
                               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                             >
                               {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -295,7 +296,7 @@ const Register = () => {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name="department"
@@ -322,10 +323,10 @@ const Register = () => {
                       <FormItem>
                         <FormLabel>Address (Optional)</FormLabel>
                         <FormControl>
-                          <Textarea 
-                            placeholder="Enter your address" 
-                            className="resize-none" 
-                            {...field} 
+                          <Textarea
+                            placeholder="Enter your address"
+                            className="resize-none"
+                            {...field}
                           />
                         </FormControl>
                         <FormMessage />
@@ -334,20 +335,20 @@ const Register = () => {
                   />
                 )}
 
-                <Button 
-                  type="submit" 
-                  className="w-full" 
+                <Button
+                  type="submit"
+                  className="w-full"
                   disabled={isLoading}
                 >
                   {isLoading ? 'Creating Account...' : 'Create Account'}
                 </Button>
               </form>
             </Form>
-            
+
             <div className="mt-6 text-center text-sm">
               <span className="text-muted-foreground">Already have an account? </span>
-              <Link 
-                to="/login" 
+              <Link
+                to="/login"
                 className="text-blue-600 hover:text-blue-500 font-medium"
               >
                 Sign in
