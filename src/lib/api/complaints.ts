@@ -1,4 +1,4 @@
-import { Complaint, CreateComplaintData, ComplaintFilters, DashboardStats, TimelineEvent, FileEvidence } from '@/types/complaint';
+import { Complaint, CreateComplaintData, ComplaintFilters, DashboardStats, TimelineEvent, FileEvidence, Officer } from '@/types/complaint';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -195,6 +195,14 @@ class ComplaintsAPI {
       console.error('Error tracking complaint:', err);
       return null;
     }
+  }
+
+
+  // -------------------------
+  // Fetch Officers
+  // -------------------------
+  async getOfficers(): Promise<Officer[]> {
+    return this.request<Officer[]>('/users/officers');
   }
 }
 

@@ -5,11 +5,12 @@ import {
   getComplaintById,
   updateComplaintStatus,
   assignComplaint,
-  // addNote,
+  addNote,
   getDashboardStats,
   getMyComplaints,
   trackComplaint,
 } from "../controllers/ComplaintController.js"
+
 import authenticateToken from "../middleware/authenticateToken.js"
 import { upload } from "../middleware/upload.js"
 
@@ -26,6 +27,6 @@ router.get("/stats", authenticateToken, getDashboardStats)
 router.get("/:id", authenticateToken, getComplaintById)
 router.patch("/:id/status", authenticateToken, updateComplaintStatus)
 router.patch("/:id/assign", authenticateToken, assignComplaint)
-// router.post("/:id/notes", authenticateToken, addNote)
+router.post("/:id/notes", authenticateToken, addNote)
 
 export default router

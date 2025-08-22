@@ -53,9 +53,11 @@ app.use("/uploads", express.static(uploadsDir))
 // ========================
 import authRouter from "./routes/AuthRouter.js"
 import complaintRouter from "./routes/ComplaintRouter.js"
+import userRouter from "./routes/UserRouter.js"
 
 app.use("/api/auth", authRouter)
 app.use("/api/complaints", complaintRouter)
+app.use("/api/users", userRouter)
 
 // ========================
 // Error Handling

@@ -8,6 +8,7 @@ import {
   CheckCircle,
   Eye,
   UserCheck,
+  Lock,
 } from 'lucide-react';
 import SEO from '@/components/SEO';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,12 +53,12 @@ const Operator = () => {
 
   useEffect(() => {
     loadReports();
-  }, [priorityFilter, statusFilter, categoryFilter, searchTerm, sortBy, sortOrder, pagination.currentPage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priorityFilter, statusFilter, categoryFilter, searchTerm, sortBy, sortOrder, pagination.currentPage]); // Remove user from deps to prevent loops
 
   const loadReports = async () => {
     try {
       setLoading(true);
-
       const filters: any = {};
       if (priorityFilter !== 'all') filters.priority = priorityFilter;
       if (statusFilter !== 'all') filters.status = statusFilter;
@@ -69,8 +70,8 @@ const Operator = () => {
       setPagination(allResponse.pagination);
 
       if (user?._id) {
-        const myResponse = await complaintsAPI.getComplaints({ assignedOfficer: user._id }, sortBy, sortOrder);
-        setMyReports(myResponse.complaints);
+        const myResponse = await complaintsAPI.getMyComplaints();
+        setMyReports(myResponse);
       } else {
         setMyReports([]);
       }
@@ -89,7 +90,6 @@ const Operator = () => {
   const handleStatusUpdate = async (reportId: string, newStatus: Complaint['status']) => {
     try {
       const updatedReport = await complaintsAPI.updateComplaintStatus(reportId, newStatus);
-
       setAllReports(prev => prev.map(r => r.id === reportId ? updatedReport : r));
       setMyReports(prev => prev.map(r => r.id === reportId ? updatedReport : r));
       toast({
@@ -98,11 +98,19 @@ const Operator = () => {
       });
     } catch (error: any) {
       console.error("Update Failed:", error);
-      toast({
-        title: "Update Failed",
-        description: error.message || "An unknown error occurred",
-        variant: "destructive"
-      });
+      if (error.message?.includes('assigned') || error.message?.includes('permission') || error.message?.includes('Unauthorized')) {
+        toast({
+          title: "Permission Denied",
+          description: "You can only update the status of cases assigned to you.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Update Failed",
+          description: error.message || "An unknown error occurred",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -110,10 +118,15 @@ const Operator = () => {
     try {
       if (!user?._id) throw new Error("User ID not found");
       const updatedReport = await complaintsAPI.assignComplaint(reportId, user._id);
-
       setAllReports(prev => prev.map(r => r.id === reportId ? updatedReport : r));
-
-      setMyReports(prev => [...prev, updatedReport]);
+      setMyReports(prev => {
+        const exists = prev.some(r => r.id === reportId);
+        if (exists) {
+          return prev.map(r => r.id === reportId ? updatedReport : r);
+        } else {
+          return [...prev, updatedReport];
+        }
+      });
       toast({
         title: "Case Assigned",
         description: "Case has been assigned to you."
@@ -146,81 +159,87 @@ const Operator = () => {
     myActive: myReports.filter(r => !['resolved', 'closed'].includes(r.status)).length,
   };
 
-  const ReportCard = ({ report, showAssignButton = false }: { report: Complaint; showAssignButton?: boolean }) => (
-    <Card key={report.id} className="hover:shadow-md transition-shadow">
-      <CardContent className="p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <h3 className="font-semibold">{report.title}</h3>
-              <Badge variant="outline" className="text-xs">
-                {report.type.toUpperCase()}
-              </Badge>
-              {report.priority === 'urgent' && (
-                <Badge variant="destructive" className="text-xs">
-                  <AlertTriangle className="h-3 w-3 mr-1" />
-                  URGENT
+  const ReportCard = ({ report, showAssignButton = false }: { report: Complaint; showAssignButton?: boolean }) => {
+    const isAssignedToCurrentUser = user?._id && report.assignedOfficer?.id === user._id;
+    const canEditStatus = isAssignedToCurrentUser;
+
+    return (
+      <Card key={report.id} className="hover:shadow-md transition-shadow">
+        <CardContent className="p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="font-semibold">{report.title}</h3>
+                <Badge variant="outline" className="text-xs">
+                  {report.type.toUpperCase()}
                 </Badge>
-              )}
+                {report.priority === 'urgent' && (
+                  <Badge variant="destructive" className="text-xs">
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    URGENT
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
+                <span>Case: {report.caseNumber}</span>
+                <span>•</span>
+                <span>{new Date(report.createdAt).toLocaleDateString()}</span>
+                <span>•</span>
+                <span className="capitalize">{report.category}</span>
+                {report.assignedOfficer && (
+                  <>
+                    <span>•</span>
+                    <span className="flex items-center gap-1">
+                      <UserCheck className="h-3 w-3" />
+                      {report.assignedOfficer.name || `Badge: ${report.assignedOfficer.badgeNumber}`}
+                    </span>
+                  </>
+                )}
+              </div>
+              <div className="flex items-center gap-2 mb-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">{report.location.address}</span>
+              </div>
+              <p className="text-sm text-muted-foreground line-clamp-2">
+                {report.description}
+              </p>
             </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
-              <span>Case: {report.caseNumber}</span>
-              <span>•</span>
-              <span>{new Date(report.createdAt).toLocaleDateString()}</span>
-              <span>•</span>
-              <span className="capitalize">{report.category}</span>
-              {report.assignedOfficer && (
-                <>
-                  <span>•</span>
-                  <span className="flex items-center gap-1">
-                    <UserCheck className="h-3 w-3" />
-                    {report.assignedOfficer.name || `Badge: ${report.assignedOfficer.badgeNumber}`}
-                  </span>
-                </>
-              )}
-            </div>
-            <div className="flex items-center gap-2 mb-2">
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">{report.location.address}</span>
-            </div>
-            <p className="text-sm text-muted-foreground line-clamp-2">
-              {report.description}
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 mt-4 lg:mt-0 lg:ml-4">
-            <div className="flex items-center gap-2">
-              <Badge className={statusColors[report.status] || 'bg-gray-100 text-gray-800'}>
-                <span className="capitalize">{report.status.replace('_', ' ')}</span>
-              </Badge>
-              <Badge variant="outline" className={priorityColors[report.priority] || 'bg-gray-100 text-gray-800'}>
-                {report.priority.toUpperCase()}
-              </Badge>
-            </div>
-            <div className="flex gap-2">
-              {showAssignButton && !report.assignedOfficer && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleAssignToSelf(report.id)}
+            <div className="flex flex-col gap-2 mt-4 lg:mt-0 lg:ml-4">
+              <div className="flex items-center gap-2">
+                <Badge className={statusColors[report.status] || 'bg-gray-100 text-gray-800'}>
+                  <span className="capitalize">{report.status.replace('_', ' ')}</span>
+                </Badge>
+                <Badge variant="outline" className={priorityColors[report.priority] || 'bg-gray-100 text-gray-800'}>
+                  {report.priority.toUpperCase()}
+                </Badge>
+              </div>
+              <div className="relative"> {/* Wrapper for potential tooltip or indicator */}
+                <Select
+                  value={report.status}
+                  onValueChange={(value) => handleStatusUpdate(report.id, value as Complaint['status'])}
+                  disabled={!canEditStatus} // Disable if not assigned to current user
                 >
-                  Assign to Me
-                </Button>
-              )}
-              <Select
-                value={report.status}
-                onValueChange={(value) => handleStatusUpdate(report.id, value as Complaint['status'])}
-              >
-                <SelectTrigger className="w-[140px] h-8">
-                  <SelectValue placeholder="Change Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="assigned">Assigned</SelectItem> {/* Match backend */}
-                  <SelectItem value="investigating">Investigating</SelectItem>
-                  <SelectItem value="resolved">Resolved</SelectItem>
-                  <SelectItem value="closed">Closed</SelectItem>
-                </SelectContent>
-              </Select>
+                  <SelectTrigger className={`w-[140px] h-8 ${!canEditStatus ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                    <SelectValue placeholder="Change Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="assigned">Assigned</SelectItem>
+                    <SelectItem value="investigating">Investigating</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+                {/* Lock Icon or Tooltip Indicator if not assigned */}
+                {!canEditStatus && (
+                  <div
+                    className="absolute -top-2 -right-2 text-muted-foreground"
+                    title="Status can only be updated by the assigned officer"
+                  >
+                    <Lock className="h-4 w-4" />
+                  </div>
+                )}
+              </div>
               <Button asChild variant="outline" size="sm">
                 <Link to={`/track?case=${report.caseNumber}`}>
                   <Eye className="h-4 w-4" />
@@ -228,10 +247,10 @@ const Operator = () => {
               </Button>
             </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+        </CardContent>
+      </Card >
+    );
+  };
 
   if (loading) {
     return (
@@ -334,7 +353,7 @@ const Operator = () => {
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="assigned">Assigned</SelectItem> {/* Match backend */}
+                <SelectItem value="assigned">Assigned</SelectItem>
                 <SelectItem value="investigating">Investigating</SelectItem>
                 <SelectItem value="resolved">Resolved</SelectItem>
                 <SelectItem value="closed">Closed</SelectItem>
@@ -351,7 +370,6 @@ const Operator = () => {
                 ))}
               </SelectContent>
             </Select>
-
             {/* Sorting Controls */}
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground whitespace-nowrap">Sort by:</span>

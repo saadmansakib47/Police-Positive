@@ -387,11 +387,10 @@ const getDashboardStats = async (req, res) => {
 
 const getMyComplaints = async (req, res) => {
   try {
-    const complaints = await Complaint.find({ createdBy: req.user.id })
+    const complaints = await Complaint.find({ assignedOfficer: req.user.id })
       .sort({ createdAt: -1 })
       .populate("assignedOfficer", "firstName lastName badgeNumber")
 
-    // Transform complaints to match frontend interface
     const transformedComplaints = complaints.map((complaint) => ({
       id: complaint._id.toString(),
       caseNumber: complaint.caseNumber,
@@ -771,13 +770,98 @@ const assignComplaint = async (req, res) => {
   }
 }
 
+const addNote = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { note } = req.body
+
+    if (!note || note.trim() === "") {
+      return res.status(400).json({ message: "Note text cannot be empty" })
+    }
+
+    const complaint = await Complaint.findById(id)
+    if (!complaint) {
+      return res.status(404).json({ message: "Complaint not found" })
+    }
+
+    complaint.notes.push({
+      text: note.trim(),
+      by: req.user.id,
+      createdAt: new Date(),
+    })
+    await complaint.save()
+
+    await addTimelineEvent(
+      complaint._id,
+      "updated",
+      `Note added: ${note.trim()}`,
+      req.user.id
+    )
+
+    const updatedComplaint = await Complaint.findById(id)
+      .populate("assignedOfficer", "firstName lastName badgeNumber")
+      .populate("createdBy", "firstName lastName email")
+      .populate("notes.by", "firstName lastName role")
+
+    const response = {
+      id: updatedComplaint._id.toString(),
+      caseNumber: updatedComplaint.caseNumber,
+      type: updatedComplaint.type,
+      category: updatedComplaint.category,
+      title: updatedComplaint.title,
+      description: updatedComplaint.description,
+      location: {
+        address: updatedComplaint.location.address,
+        lat: updatedComplaint.location.lat,
+        lng: updatedComplaint.location.lng,
+      },
+      reporterInfo: updatedComplaint.reporterInfo,
+      status: updatedComplaint.status,
+      priority: updatedComplaint.priority,
+      assignedOfficer: updatedComplaint.assignedOfficer
+        ? {
+            id: updatedComplaint.assignedOfficer._id.toString(),
+            name: `${updatedComplaint.assignedOfficer.firstName} ${updatedComplaint.assignedOfficer.lastName}`,
+            badgeNumber: updatedComplaint.assignedOfficer.badgeNumber,
+          }
+        : undefined,
+      evidence: {
+        files: [],
+        notes: updatedComplaint.notes
+          ? updatedComplaint.notes.map((n) => ({
+              text: n.text,
+              createdAt: n.createdAt.toISOString(),
+              by: n.by
+                ? {
+                    id: n.by._id.toString(),
+                    name: `${n.by.firstName} ${n.by.lastName}`,
+                    role: n.by.role,
+                  }
+                : null,
+            }))
+          : [],
+      },
+      timeline: [],
+      createdAt: updatedComplaint.createdAt.toISOString(),
+      updatedAt: updatedComplaint.updatedAt.toISOString(),
+      createdBy: updatedComplaint.createdBy
+        ? updatedComplaint.createdBy._id.toString()
+        : null,
+    }
+    res.json(response)
+  } catch (err) {
+    console.error("Error adding note to complaint:", err)
+    res.status(500).json({ message: "Server error" })
+  }
+}
+
 export {
   createComplaint,
   getComplaints,
   getComplaintById,
   updateComplaintStatus,
   assignComplaint,
-  // addNote,
+  addNote,
   getDashboardStats,
   getMyComplaints,
   trackComplaint,

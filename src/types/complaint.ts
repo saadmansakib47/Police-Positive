@@ -98,3 +98,9 @@ export interface DashboardStats {
   complaintsThisWeek: number;
   complaintsThisMonth: number;
 }
+
+export interface Officer {
+  id: string;
+  name: string;
+  badgeNumber: string;
+}
