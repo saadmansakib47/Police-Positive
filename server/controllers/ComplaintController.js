@@ -6,6 +6,7 @@ import EvidenceFile from "../models/EvidenceFile.js"
 import TimelineEvent from "../models/TimelineEvent.js"
 import { addTimelineEvent, generateCaseNumber } from "../utils/caseHelpers.js"
 import mongoose from "mongoose"
+import Notification from "../models/Notification.js"
 
 const createComplaint = async (req, res) => {
   try {
@@ -385,9 +386,10 @@ const getDashboardStats = async (req, res) => {
   }
 }
 
-const getMyComplaints = async (req, res) => {
+// Get complaints created by the current user (for civilians)
+const getMyCivilianComplaints = async (req, res) => {
   try {
-    const complaints = await Complaint.find({ assignedOfficer: req.user.id })
+    const complaints = await Complaint.find({ createdBy: req.user.id })
       .sort({ createdAt: -1 })
       .populate("assignedOfficer", "firstName lastName badgeNumber")
 
@@ -413,21 +415,54 @@ const getMyComplaints = async (req, res) => {
             badgeNumber: complaint.assignedOfficer.badgeNumber,
           }
         : undefined,
-      evidence: {
-        files: [],
-        notes: complaint.notes ? complaint.notes.map((note) => note.text) : [],
-      },
-      timeline: [],
       createdAt: complaint.createdAt.toISOString(),
       updatedAt: complaint.updatedAt.toISOString(),
-      createdBy: complaint.createdBy
-        ? complaint.createdBy._id.toString()
-        : null,
     }))
 
     res.json(transformedComplaints)
   } catch (err) {
-    console.error("Error fetching my complaints:", err)
+    console.error("Error fetching civilian complaints:", err)
+    res.status(500).json({ message: "Server error" })
+  }
+}
+
+// Delete complaint (only by the creator)
+const deleteComplaint = async (req, res) => {
+  try {
+    const { id } = req.params
+    
+    const complaint = await Complaint.findById(id)
+    if (!complaint) {
+      return res.status(404).json({ message: "Complaint not found" })
+    }
+
+    // Check if the user is the creator of the complaint
+    if (complaint.createdBy.toString() !== req.user.id) {
+      return res.status(403).json({ message: "You can only delete your own complaints" })
+    }
+
+    // Check if complaint is already assigned or in progress
+    if (complaint.status !== 'pending') {
+      return res.status(400).json({ 
+        message: "Cannot delete complaint that is already assigned or in progress" 
+      })
+    }
+
+    // Delete related evidence files
+    await EvidenceFile.deleteMany({ complaintId: id })
+    
+    // Delete related timeline events
+    await TimelineEvent.deleteMany({ complaintId: id })
+    
+    // Delete related notifications
+    await Notification.deleteMany({ relatedCaseId: id })
+    
+    // Delete the complaint
+    await Complaint.findByIdAndDelete(id)
+
+    res.json({ message: "Complaint deleted successfully" })
+  } catch (err) {
+    console.error("Error deleting complaint:", err)
     res.status(500).json({ message: "Server error" })
   }
 }
@@ -680,6 +715,7 @@ const updateComplaintStatus = async (req, res) => {
   }
 }
 
+// Modify the existing assignComplaint function
 const assignComplaint = async (req, res) => {
   try {
     const { id } = req.params
@@ -694,8 +730,14 @@ const assignComplaint = async (req, res) => {
       return res.status(404).json({ message: "Complaint not found" })
     }
 
+    // Check if case is already assigned to someone else
+    if (complaint.assignedOfficer && complaint.assignedOfficer.toString() !== officerId) {
+      return res.status(400).json({ message: "Case is already assigned to another officer" })
+    }
+
     const oldOfficerId = complaint.assignedOfficer
     const wasUnassigned = !oldOfficerId
+    const isSelfAssignment = req.user.id === officerId
 
     complaint.assignedOfficer = officerId
 
@@ -705,19 +747,38 @@ const assignComplaint = async (req, res) => {
     await complaint.save()
 
     const officer = await User.findById(officerId)
-    let description = `Case assigned to ${
-      officer
-        ? officer.firstName + " " + officer.lastName
-        : "Officer ID: " + officerId
-    }`
-    if (!wasUnassigned) {
-      description = `Case reassigned from previous officer to ${
-        officer
-          ? officer.firstName + " " + officer.lastName
-          : "Officer ID: " + officerId
-      }`
+    let description = `Case assigned to ${officer ? officer.firstName + " " + officer.lastName : "Officer ID: " + officerId}`
+    
+    if (isSelfAssignment) {
+      description = `Officer ${officer.firstName} ${officer.lastName} self-assigned to this case`
+    } else if (!wasUnassigned) {
+      description = `Case reassigned from previous officer to ${officer ? officer.firstName + " " + officer.lastName : "Officer ID: " + officerId}`
     }
+    
     await addTimelineEvent(complaint._id, "assigned", description, req.user.id)
+
+    // Create notification for the civilian who reported the case
+    if (complaint.createdBy && officer) {
+      const notificationTitle = isSelfAssignment ? 
+        "Officer Self-Assigned to Your Case" : 
+        "Officer Assigned to Your Case"
+      
+      const notificationMessage = `Officer ${officer.firstName} ${officer.lastName} (Badge: ${officer.badgeNumber}) has been assigned to your case ${complaint.caseNumber}.`
+      
+      await createNotification(
+        complaint.createdBy,
+        "officer_assigned",
+        notificationTitle,
+        notificationMessage,
+        complaint._id,
+        officerId,
+        {
+          caseNumber: complaint.caseNumber,
+          officerName: `${officer.firstName} ${officer.lastName}`,
+          officerBadgeNumber: officer.badgeNumber
+        }
+      )
+    }
 
     const updatedComplaint = await Complaint.findById(id)
       .populate("assignedOfficer", "firstName lastName badgeNumber")
@@ -863,6 +924,104 @@ export {
   assignComplaint,
   addNote,
   getDashboardStats,
-  getMyComplaints,
+  getMyCivilianComplaints,
+  deleteComplaint,
   trackComplaint,
+  getNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+}
+
+// Add these new functions:
+
+// Create notification helper function
+const createNotification = async (userId, type, title, message, relatedCaseId = null, relatedOfficerId = null, metadata = {}) => {
+  try {
+    const notification = new Notification({
+      userId,
+      type,
+      title,
+      message,
+      relatedCaseId,
+      relatedOfficerId,
+      metadata
+    })
+    await notification.save()
+    return notification
+  } catch (error) {
+    console.error('Error creating notification:', error)
+  }
+}
+
+// Get user notifications
+const getNotifications = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, unreadOnly = false } = req.query
+    const query = { userId: req.user.id }
+    
+    if (unreadOnly === 'true') {
+      query.isRead = false
+    }
+
+    const notifications = await Notification.find(query)
+      .populate('relatedOfficerId', 'firstName lastName badgeNumber')
+      .populate('relatedCaseId', 'caseNumber title')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+
+    const totalNotifications = await Notification.countDocuments(query)
+    const unreadCount = await Notification.countDocuments({ 
+      userId: req.user.id, 
+      isRead: false 
+    })
+
+    res.json({
+      notifications,
+      totalNotifications,
+      unreadCount,
+      currentPage: page,
+      totalPages: Math.ceil(totalNotifications / limit)
+    })
+  } catch (error) {
+    console.error('Error fetching notifications:', error)
+    res.status(500).json({ message: 'Server error' })
+  }
+}
+
+// Mark notification as read
+const markNotificationAsRead = async (req, res) => {
+  try {
+    const { id } = req.params
+    
+    const notification = await Notification.findOneAndUpdate(
+      { _id: id, userId: req.user.id },
+      { isRead: true },
+      { new: true }
+    )
+
+    if (!notification) {
+      return res.status(404).json({ message: 'Notification not found' })
+    }
+
+    res.json({ message: 'Notification marked as read' })
+  } catch (error) {
+    console.error('Error marking notification as read:', error)
+    res.status(500).json({ message: 'Server error' })
+  }
+}
+
+// Mark all notifications as read
+const markAllNotificationsAsRead = async (req, res) => {
+  try {
+    await Notification.updateMany(
+      { userId: req.user.id, isRead: false },
+      { isRead: true }
+    )
+
+    res.json({ message: 'All notifications marked as read' })
+  } catch (error) {
+    console.error('Error marking all notifications as read:', error)
+    res.status(500).json({ message: 'Server error' })
+  }
 }

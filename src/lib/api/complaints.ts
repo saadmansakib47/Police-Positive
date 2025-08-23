@@ -133,7 +133,7 @@ class ComplaintsAPI {
   }
 
   async getMyComplaints(): Promise<Complaint[]> {
-    return this.request<Complaint[]>('/complaints/my');
+    return this.request<Complaint[]>('/complaints/my-civilian');
   }
 
   // -------------------------
