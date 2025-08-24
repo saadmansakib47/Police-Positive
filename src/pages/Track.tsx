@@ -309,7 +309,7 @@ const Track = () => {
                         </p>
                       ) : (
                         <p className="text-xs text-muted-foreground">
-                          Reported By: {event.userName ?? "Anonymous Reporter"}
+                          Action By: {event.userName ?? "Anonymous Reporter"}
                         </p>
                       )}
                     </div>

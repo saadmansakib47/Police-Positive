@@ -70,7 +70,7 @@ const Operator = () => {
       setPagination(allResponse.pagination);
 
       if (user?._id) {
-        const myResponse = await complaintsAPI.getMyComplaints();
+        const myResponse = await complaintsAPI.getMyOperatorComplaints();
         setMyReports(myResponse);
       } else {
         setMyReports([]);
@@ -214,12 +214,12 @@ const Operator = () => {
                   {report.priority.toUpperCase()}
                 </Badge>
               </div>
-              
+
               {/* Self-Assignment Button */}
               {canAssignToSelf && (
-                <Button 
+                <Button
                   onClick={() => handleAssignToSelf(report.id)}
-                  variant="default" 
+                  variant="default"
                   size="sm"
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
@@ -227,7 +227,7 @@ const Operator = () => {
                   Accept
                 </Button>
               )}
-              
+
               <div className="relative">
                 <Select
                   value={report.status}

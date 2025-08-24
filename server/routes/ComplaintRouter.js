@@ -13,6 +13,7 @@ import {
   getNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
+  getMyOperatorComplaints,
 } from "../controllers/ComplaintController.js"
 
 import authenticateToken from "../middleware/authenticateToken.js"
@@ -27,6 +28,7 @@ router.get("/track/:caseNumber?", trackComplaint)
 router.post("/", authenticateToken, upload.array("files", 10), createComplaint)
 router.get("/", authenticateToken, getComplaints)
 router.get("/my-civilian", authenticateToken, getMyCivilianComplaints)
+router.get("/my-operator", authenticateToken, getMyOperatorComplaints)
 router.get("/stats", authenticateToken, getDashboardStats)
 router.get("/notifications", authenticateToken, getNotifications)
 router.get("/:id", authenticateToken, getComplaintById)
@@ -34,7 +36,15 @@ router.patch("/:id/status", authenticateToken, updateComplaintStatus)
 router.patch("/:id/assign", authenticateToken, assignComplaint)
 router.post("/:id/notes", authenticateToken, addNote)
 router.delete("/:id", authenticateToken, deleteComplaint)
-router.patch("/notifications/:id/read", authenticateToken, markNotificationAsRead)
-router.patch("/notifications/mark-all-read", authenticateToken, markAllNotificationsAsRead)
+router.patch(
+  "/notifications/:id/read",
+  authenticateToken,
+  markNotificationAsRead
+)
+router.patch(
+  "/notifications/mark-all-read",
+  authenticateToken,
+  markAllNotificationsAsRead
+)
 
 export default router

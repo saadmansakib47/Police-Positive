@@ -136,6 +136,10 @@ class ComplaintsAPI {
     return this.request<Complaint[]>('/complaints/my-civilian');
   }
 
+  async getMyOperatorComplaints(): Promise<Complaint[]> {
+    return this.request<Complaint[]>('/complaints/my-operator');
+  }
+
   // -------------------------
   // Track Complaint by Case Number (bulletproof)
   // -------------------------
