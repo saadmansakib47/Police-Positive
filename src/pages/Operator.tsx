@@ -162,6 +162,7 @@ const Operator = () => {
   const ReportCard = ({ report, showAssignButton = false }: { report: Complaint; showAssignButton?: boolean }) => {
     const isAssignedToCurrentUser = user?._id && report.assignedOfficer?.id === user._id;
     const canEditStatus = isAssignedToCurrentUser;
+    const canAssignToSelf = showAssignButton && !report.assignedOfficer && report.status === 'pending';
 
     return (
       <Card key={report.id} className="hover:shadow-md transition-shadow">
@@ -213,11 +214,25 @@ const Operator = () => {
                   {report.priority.toUpperCase()}
                 </Badge>
               </div>
-              <div className="relative"> {/* Wrapper for potential tooltip or indicator */}
+              
+              {/* Self-Assignment Button */}
+              {canAssignToSelf && (
+                <Button 
+                  onClick={() => handleAssignToSelf(report.id)}
+                  variant="default" 
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <UserCheck className="h-4 w-4 mr-2" />
+                  Accept
+                </Button>
+              )}
+              
+              <div className="relative">
                 <Select
                   value={report.status}
                   onValueChange={(value) => handleStatusUpdate(report.id, value as Complaint['status'])}
-                  disabled={!canEditStatus} // Disable if not assigned to current user
+                  disabled={!canEditStatus}
                 >
                   <SelectTrigger className={`w-[140px] h-8 ${!canEditStatus ? 'opacity-70 cursor-not-allowed' : ''}`}>
                     <SelectValue placeholder="Change Status" />
@@ -230,7 +245,6 @@ const Operator = () => {
                     <SelectItem value="closed">Closed</SelectItem>
                   </SelectContent>
                 </Select>
-                {/* Lock Icon or Tooltip Indicator if not assigned */}
                 {!canEditStatus && (
                   <div
                     className="absolute -top-2 -right-2 text-muted-foreground"
@@ -248,7 +262,7 @@ const Operator = () => {
             </div>
           </div>
         </CardContent>
-      </Card >
+      </Card>
     );
   };
 

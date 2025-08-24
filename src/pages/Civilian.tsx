@@ -314,6 +314,50 @@ const Civilian = () => {
                         View Details
                       </Link>
                     </Button>
+                    
+                    {/* Add delete button only for pending complaints */}
+                    {report.status === 'pending' && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Complaint</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete this complaint? This action cannot be undone.
+                              Only pending complaints can be deleted.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={async () => {
+                                try {
+                                  await complaintsAPI.deleteComplaint(report.id);
+                                  setMyReports(prev => prev.filter(r => r.id !== report.id));
+                                  toast({
+                                    title: "Success",
+                                    description: "Complaint deleted successfully",
+                                  });
+                                } catch (error) {
+                                  toast({
+                                    title: "Error",
+                                    description: "Failed to delete complaint",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
                   </div>
                 </div>
               ))}
@@ -328,6 +372,9 @@ const Civilian = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Add the MyComplaints component here */}
+      <MyComplaints />
 
       {/* Empty State */}
       {myReports.length === 0 && (
@@ -532,5 +579,3 @@ const MyComplaints = () => {
     </Card>
   );
 };
-
-// Then add <MyComplaints /> component to your Civilian page JSX
