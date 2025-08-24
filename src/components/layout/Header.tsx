@@ -13,6 +13,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import QuickReportDialog from '@/components/landing/QuickReportDialog';
+import NotificationBell from '@/components/common/NotificationBell';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -109,6 +110,8 @@ const Header = () => {
           {/* Right side */}
           <div className="hidden md:flex items-center space-x-4">
             <QuickReportDialog />
+            
+            {isAuthenticated && <NotificationBell />}
 
             {user && isAuthenticated ? (
               <DropdownMenu>
@@ -258,5 +261,9 @@ const Header = () => {
     </header>
   );
 };
+
+// Remove these comment lines and JSX fragment
+// In the JSX, add the NotificationBell component near the user dropdown:
+// Find the section with the user avatar and add NotificationBell before it:
 
 export default Header;

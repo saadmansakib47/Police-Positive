@@ -204,6 +204,12 @@ class ComplaintsAPI {
   async getOfficers(): Promise<Officer[]> {
     return this.request<Officer[]>('/users/officers');
   }
+
+  async deleteComplaint(id: string): Promise<void> {
+    return this.request<void>(`/complaints/${id}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const complaintsAPI = new ComplaintsAPI();
