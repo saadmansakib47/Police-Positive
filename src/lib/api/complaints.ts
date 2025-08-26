@@ -136,6 +136,10 @@ class ComplaintsAPI {
     return this.request<Complaint[]>('/complaints/my-civilian');
   }
 
+  async getUnassignedComplaints(): Promise<Complaint[]> {
+    return this.request<Complaint[]>('/complaints/unassigned');
+  }
+
   async getMyOperatorComplaints(): Promise<Complaint[]> {
     return this.request<Complaint[]>('/complaints/my-operator');
   }

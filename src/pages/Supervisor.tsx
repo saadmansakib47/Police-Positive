@@ -1,15 +1,11 @@
 import { useState, useEffect } from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell
-} from 'recharts';
-import {
   TrendingUp, Clock, CheckCircle, AlertTriangle, FileText, RotateCcw,
 } from 'lucide-react';
 import SEO from '@/components/SEO';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { complaintsAPI } from '@/lib/api/complaints';
@@ -26,8 +22,6 @@ import {
   SelectValue as SelectValueComponent,
 } from '@/components/ui/select';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
-
 interface CrimeStatistics {
   totalReports: number;
   pendingReports: number;
@@ -42,6 +36,7 @@ interface CrimeStatistics {
 const Supervisor = () => {
   const [stats, setStats] = useState<CrimeStatistics | null>(null);
   const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [unassignedComplaints, setUnassignedComplaints] = useState<Complaint[]>([]);
   const [officers, setOfficers] = useState<Officer[]>([]);
   const [timeRange, setTimeRange] = useState('7d');
   const [loading, setLoading] = useState(true);
@@ -58,7 +53,22 @@ const Supervisor = () => {
     loadStatistics();
     loadComplaints();
     loadOfficers();
+    loadUnassignedComplaints();
   }, [timeRange]);
+
+  const loadUnassignedComplaints = async () => {
+    try {
+      const response = await complaintsAPI.getUnassignedComplaints();
+      setUnassignedComplaints(response);
+    } catch (error) {
+      console.error("Error loading unassigned complaints:", error);
+      toast({
+        title: "Error loading unassigned complaints",
+        description: "Failed to load unassigned complaint data",
+        variant: "destructive"
+      });
+    }
+  };
 
   const loadStatistics = async () => {
     try {
@@ -167,9 +177,11 @@ const Supervisor = () => {
       }
 
       const updatedComplaint = await complaintsAPI.assignComplaint(selectedComplaint.id, newOfficerId);
+
       setComplaints(complaints.map(c =>
         c.id === selectedComplaint.id ? updatedComplaint : c
       ));
+      setUnassignedComplaints(unassignedComplaints.filter(c => c.id !== selectedComplaint.id));
 
       toast({
         title: "Complaint reassigned",
@@ -190,26 +202,43 @@ const Supervisor = () => {
     }
   };
 
-
   const calculateAgingPriority = (complaint: Complaint) => {
     const createdDate = new Date(complaint.createdAt);
     const now = new Date();
-    const diffInDays = (now.getTime() - createdDate.getTime()) / (1000 * 3600 * 24);
+    const diffInHours = (now.getTime() - createdDate.getTime()) / (1000 * 3600);
 
-    if (diffInDays > 30) return 'urgent';
-    if (diffInDays > 14) return 'high';
-    if (diffInDays > 7) return 'medium';
+    if (diffInHours > 24) return 'urgent';
+    if (diffInHours > 12) return 'high';
+    if (diffInHours > 1) return 'medium';
     return complaint.priority;
   };
 
   const getAgingComplaints = () => {
     return complaints
-      .filter(c => c.status !== 'resolved' && c.status !== 'closed')
+      .filter(c => c.status !== 'resolved' && c.status !== 'closed' && c.assignedOfficer)
       .map(c => ({
         ...c,
         agingPriority: calculateAgingPriority(c)
       }))
+      .filter(c => c.agingPriority !== c.priority) // Only show complaints that have aged
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  };
+
+  const getNormalPriorityComplaints = () => {
+    return complaints
+      .filter(c => c.status !== 'resolved' && c.status !== 'closed' && c.assignedOfficer)
+      .map(c => ({
+        ...c,
+        agingPriority: calculateAgingPriority(c)
+      }))
+      .filter(c => c.agingPriority === c.priority) // Only show complaints that haven't aged
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  };
+
+  const refreshAll = () => {
+    loadStatistics();
+    loadComplaints();
+    loadUnassignedComplaints();
   };
 
   if (loading || !stats) {
@@ -221,21 +250,6 @@ const Supervisor = () => {
       </div>
     );
   }
-
-  const categoryData = Object.entries(stats.byCategory).map(([name, value]) => ({
-    name: name.charAt(0).toUpperCase() + name.slice(1),
-    value
-  }));
-
-  const statusData = Object.entries(stats.byStatus).map(([name, value]) => ({
-    name: name.charAt(0).toUpperCase() + name.slice(1).replace('_', ' '),
-    value
-  }));
-
-  const priorityData = Object.entries(stats.byPriority).map(([name, value]) => ({
-    name: name.charAt(0).toUpperCase() + name.slice(1),
-    value
-  }));
 
   return (
     <div className="container mx-auto py-8">
@@ -264,7 +278,7 @@ const Supervisor = () => {
               <SelectItem value="90d">Last 3 Months</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={() => { loadStatistics(); loadComplaints(); }} variant="outline">
+          <Button onClick={refreshAll} variant="outline">
             <TrendingUp className="h-4 w-4 mr-2" />
             Refresh
           </Button>
@@ -323,6 +337,50 @@ const Supervisor = () => {
         </Card>
       </div>
 
+      {/* Unassigned Complaints Section */}
+      {unassignedComplaints.length > 0 && (
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center text-red-600">
+              <AlertTriangle className="h-5 w-5 mr-2" />
+              Unassigned Complaints
+            </CardTitle>
+            <CardDescription>
+              These complaints need to be assigned to an officer
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {unassignedComplaints.slice(0, 5).map((complaint) => (
+                <div key={complaint.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <h4 className="font-medium">{complaint.title}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Case #{complaint.caseNumber} • Created {new Date(complaint.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="destructive">Unassigned</Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedComplaint(complaint);
+                        setIsReassignDialogOpen(true);
+                      }}
+                    >
+                      <RotateCcw className="h-4 w-4 mr-1" />
+                      Assign
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Aging Complaints Section */}
       {getAgingComplaints().length > 0 && (
         <Card className="mb-8">
           <CardHeader>
@@ -365,7 +423,54 @@ const Supervisor = () => {
         </Card>
       )}
 
-      {/* Charts and Analytics */}
+      {/* Normal Priority Complaints Section */}
+      {getNormalPriorityComplaints().length > 0 && (
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center text-blue-600">
+              <Clock className="h-5 w-5 mr-2" />
+              Assigned Complaints (Normal Priority)
+            </CardTitle>
+            <CardDescription>
+              These complaints are assigned and progressing normally
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {getNormalPriorityComplaints().slice(0, 5).map((complaint) => (
+                <div key={complaint.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <h4 className="font-medium">{complaint.title}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Case #{complaint.caseNumber} • Created {new Date(complaint.createdAt).toLocaleDateString()}
+                    </p>
+                    {complaint.assignedOfficer && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Assigned to: {complaint.assignedOfficer.name}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default">
+                      {complaint.priority.charAt(0).toUpperCase() + complaint.priority.slice(1)}
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedComplaint(complaint);
+                        setIsNoteDialogOpen(true);
+                      }}
+                    >
+                      Add Note
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Add Note Dialog */}
       <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
@@ -416,7 +521,9 @@ const Supervisor = () => {
       }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reassign Complaint</DialogTitle>
+            <DialogTitle>
+              {selectedComplaint?.assignedOfficer ? "Reassign Complaint" : "Assign Complaint"}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -429,7 +536,7 @@ const Supervisor = () => {
             </div>
             <div>
               <label className="text-sm font-medium">Select Officer</label>
-              <SelectComponent value={newOfficerId} onValueChange={setNewOfficerId}> {/* Use UI library Select */}
+              <SelectComponent value={newOfficerId} onValueChange={setNewOfficerId}>
                 <SelectTriggerComponent className="mt-1">
                   <SelectValueComponent placeholder="Select an officer" />
                 </SelectTriggerComponent>
@@ -449,7 +556,7 @@ const Supervisor = () => {
               </SelectComponent>
             </div>
             <div>
-              <label className="text-sm font-medium">Reason for Reassignment (Optional)</label>
+              <label className="text-sm font-medium">{selectedComplaint?.assignedOfficer ? "Reason for Reassignment" : "Note for Assignment"} (Optional)</label>
               <Textarea
                 value={reassignReason}
                 onChange={(e) => setReassignReason(e.target.value)}
@@ -463,7 +570,7 @@ const Supervisor = () => {
                 Cancel
               </Button>
               <Button onClick={handleReassignComplaint}>
-                Reassign Complaint
+                {selectedComplaint?.assignedOfficer ? "Reassign Complaint" : "Assign Complaint"}
               </Button>
             </div>
           </div>

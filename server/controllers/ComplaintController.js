@@ -125,6 +125,48 @@ const createComplaint = async (req, res) => {
   }
 }
 
+const getUnassignedComplaints = async (req, res) => {
+  try {
+    const complaints = await Complaint.find({
+      status: "pending",
+      assignedOfficer: { $exists: false },
+    })
+      .sort({ createdAt: -1 })
+      .populate("assignedOfficer", "firstName lastName badgeNumber")
+
+    const transformedComplaints = complaints.map((complaint) => ({
+      id: complaint._id.toString(),
+      caseNumber: complaint.caseNumber,
+      type: complaint.type,
+      category: complaint.category,
+      title: complaint.title,
+      description: complaint.description,
+      location: {
+        address: complaint.location.address,
+        lat: complaint.location.lat,
+        lng: complaint.location.lng,
+      },
+      reporterInfo: complaint.reporterInfo,
+      status: complaint.status,
+      priority: complaint.priority,
+      assignedOfficer: complaint.assignedOfficer
+        ? {
+            id: complaint.assignedOfficer._id.toString(),
+            name: `${complaint.assignedOfficer.firstName} ${complaint.assignedOfficer.lastName}`,
+            badgeNumber: complaint.assignedOfficer.badgeNumber,
+          }
+        : undefined,
+      createdAt: complaint.createdAt.toISOString(),
+      updatedAt: complaint.updatedAt.toISOString(),
+    }))
+
+    res.json(transformedComplaints)
+  } catch (err) {
+    console.error("Error fetching unassigned complaints:", err)
+    res.status(500).json({ message: "Server error" })
+  }
+}
+
 const getComplaints = async (req, res) => {
   try {
     const {
@@ -947,6 +989,7 @@ const addNote = async (req, res) => {
 export {
   createComplaint,
   getComplaints,
+  getUnassignedComplaints,
   getComplaintById,
   updateComplaintStatus,
   assignComplaint,

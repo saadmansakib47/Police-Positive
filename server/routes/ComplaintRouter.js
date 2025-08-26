@@ -14,6 +14,7 @@ import {
   markNotificationAsRead,
   markAllNotificationsAsRead,
   getMyOperatorComplaints,
+  getUnassignedComplaints,
 } from "../controllers/ComplaintController.js"
 
 import authenticateToken from "../middleware/authenticateToken.js"
@@ -27,6 +28,7 @@ router.get("/track/:caseNumber?", trackComplaint)
 // Protected routes
 router.post("/", authenticateToken, upload.array("files", 10), createComplaint)
 router.get("/", authenticateToken, getComplaints)
+router.get("/unassigned", authenticateToken, getUnassignedComplaints)
 router.get("/my-civilian", authenticateToken, getMyCivilianComplaints)
 router.get("/my-operator", authenticateToken, getMyOperatorComplaints)
 router.get("/stats", authenticateToken, getDashboardStats)
