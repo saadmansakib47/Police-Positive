@@ -20,6 +20,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { complaintsAPI } from '@/lib/api/complaints';
 import { Complaint } from '@/types/complaint';
 import { Trash2, Eye, Calendar, AlertCircle } from 'lucide-react';
+import Chatbox from '@/components/chat/Chatbox';
 
 
 import {
@@ -37,6 +38,7 @@ import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 
 const Civilian = () => {
+  const [chatOpen, setChatOpen] = useState(false);
   const [myReports, setMyReports] = useState<Complaint[]>([]);
   const [dashboardStats, setDashboardStats] = useState({
     totalComplaints: 0,
@@ -196,21 +198,27 @@ const Civilian = () => {
         </Card>
 
         <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageCircle className="h-5 w-5 text-purple-600" />
-              AI Assistant
-            </CardTitle>
-            <CardDescription>
-              Get help with reporting and legal guidance
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" className="w-full" disabled>
-              Chat Now (Coming Soon)
-            </Button>
-          </CardContent>
-        </Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5 text-purple-600" />
+                AI Assistant
+              </CardTitle>
+              <CardDescription>
+                Get help with reporting and legal guidance
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setChatOpen(true)}
+              >
+                Chat Now
+              </Button>
+            </CardContent>
+          </Card>
+      </div>
+      <Chatbox open={chatOpen} setOpen={setChatOpen} />
 
         <Card className="hover:shadow-lg transition-shadow cursor-pointer">
           <CardHeader>
@@ -267,7 +275,7 @@ const Civilian = () => {
             </Button>
           </CardContent>
         </Card>
-      </div>
+
 
       {/* Recent Reports */}
       {myReports.length > 0 && (
