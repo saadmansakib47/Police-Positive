@@ -218,6 +218,60 @@ class ComplaintsAPI {
       method: 'DELETE',
     });
   }
+
+  // ---------------------------
+  // Reports Methods
+  // ---------------------------
+  async getComplaintsByCategory(startDate?: string, endDate?: string): Promise<{ _id: string, count: number }[]> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+
+    return this.request<{ _id: string, count: number }[]>(`/complaints/reports/category?${params.toString()}`);
+  }
+
+  async getComplaintsByStatus(startDate?: string, endDate?: string): Promise<{ _id: string, count: number }[]> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+
+    return this.request<{ _id: string, count: number }[]>(`/complaints/reports/status?${params.toString()}`);
+  }
+
+  async getComplaintsByPriority(startDate?: string, endDate?: string): Promise<{ _id: string, count: number }[]> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+
+    return this.request<{ _id: string, count: number }[]>(`/complaints/reports/priority?${params.toString()}`);
+  }
+
+  async getComplaintsOverTime(startDate?: string, endDate?: string, interval?: string): Promise<{ _id: string, count: number }[]> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    if (interval) params.append('interval', interval);
+
+    return this.request<{ _id: string, count: number }[]>(`/complaints/reports/over-time?${params.toString()}`);
+  }
+
+  async getOfficerPerformance(startDate?: string, endDate?: string): Promise<any[]> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+
+    return this.request<any[]>(`/complaints/reports/officer-performance?${params.toString()}`);
+  }
+
+  async getResolutionTimeStats(startDate?: string, endDate?: string): Promise<any> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+
+    return this.request<any>(`/complaints/reports/resolution-time?${params.toString()}`);
+  }
 }
+
+
 
 export const complaintsAPI = new ComplaintsAPI();

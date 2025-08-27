@@ -1,41 +1,40 @@
-import escapeRegExp from "lodash";
-
-import User from "../models/User.js";
-import Complaint from "../models/Complaint.js";
-import EvidenceFile from "../models/EvidenceFile.js";
-import TimelineEvent from "../models/TimelineEvent.js";
-import { addTimelineEvent, generateCaseNumber } from "../utils/caseHelpers.js";
-import mongoose from "mongoose";
-import Notification from "../models/Notification.js";
+import escapeRegExp from "lodash"
+import User from "../models/User.js"
+import Complaint from "../models/Complaint.js"
+import EvidenceFile from "../models/EvidenceFile.js"
+import TimelineEvent from "../models/TimelineEvent.js"
+import { addTimelineEvent, generateCaseNumber } from "../utils/caseHelpers.js"
+import mongoose from "mongoose"
+import Notification from "../models/Notification.js"
 
 const createComplaint = async (req, res) => {
   try {
-    let complaintData;
+    let complaintData
 
     if (req.is("application/json")) {
-      complaintData = req.body;
+      complaintData = req.body
     } else {
       complaintData =
         typeof req.body.complaintData === "string"
           ? JSON.parse(req.body.complaintData)
-          : req.body;
+          : req.body
     }
 
     if (!complaintData.location) {
-      return res.status(400).json({ message: "Missing location" });
+      return res.status(400).json({ message: "Missing location" })
     }
 
-    const loc = complaintData.location;
+    const loc = complaintData.location
 
     if (loc.coordinates) {
-      loc.lat = Number(loc.coordinates.lat);
-      loc.lng = Number(loc.coordinates.lng);
+      loc.lat = Number(loc.coordinates.lat)
+      loc.lng = Number(loc.coordinates.lng)
     } else {
-      loc.lat = Number(loc.lat);
-      loc.lng = Number(loc.lng);
+      loc.lat = Number(loc.lat)
+      loc.lng = Number(loc.lng)
     }
 
-    const { type, category, title, description, reporterInfo } = complaintData;
+    const { type, category, title, description, reporterInfo } = complaintData
 
     if (
       !type ||
@@ -48,14 +47,14 @@ const createComplaint = async (req, res) => {
       !reporterInfo ||
       !reporterInfo.phone
     ) {
-      return res.status(400).json({ message: "Missing required fields" });
+      return res.status(400).json({ message: "Missing required fields" })
     }
 
-    const caseNumber = generateCaseNumber();
+    const caseNumber = generateCaseNumber()
     const priority =
       type.toLowerCase() === "emergency" || type.toLowerCase() === "high"
         ? "urgent"
-        : "medium";
+        : "medium"
 
     const complaint = new Complaint({
       caseNumber,
@@ -67,9 +66,9 @@ const createComplaint = async (req, res) => {
       reporterInfo,
       priority,
       createdBy: req.user.id,
-    });
+    })
 
-    await complaint.save();
+    await complaint.save()
 
     if (Array.isArray(req.files) && req.files.length > 0) {
       await Promise.all(
@@ -83,7 +82,7 @@ const createComplaint = async (req, res) => {
             path: file.path,
           }).save()
         )
-      );
+      )
     }
 
     await addTimelineEvent(
@@ -91,7 +90,7 @@ const createComplaint = async (req, res) => {
       "created",
       "Complaint submitted",
       req.user.id
-    );
+    )
 
     const response = {
       id: complaint._id.toString(),
@@ -116,14 +115,14 @@ const createComplaint = async (req, res) => {
       createdAt: complaint.createdAt.toISOString(),
       updatedAt: complaint.updatedAt.toISOString(),
       createdBy: complaint.createdBy.toString(),
-    };
+    }
 
-    res.status(201).json(response);
+    res.status(201).json(response)
   } catch (err) {
-    console.error("Error creating complaint:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error creating complaint:", err)
+    res.status(500).json({ message: "Server error" })
   }
-};
+}
 
 const getUnassignedComplaints = async (req, res) => {
   try {
@@ -132,7 +131,7 @@ const getUnassignedComplaints = async (req, res) => {
       assignedOfficer: { $exists: false },
     })
       .sort({ createdAt: -1 })
-      .populate("assignedOfficer", "firstName lastName badgeNumber");
+      .populate("assignedOfficer", "firstName lastName badgeNumber")
 
     const transformedComplaints = complaints.map((complaint) => ({
       id: complaint._id.toString(),
@@ -158,14 +157,14 @@ const getUnassignedComplaints = async (req, res) => {
         : undefined,
       createdAt: complaint.createdAt.toISOString(),
       updatedAt: complaint.updatedAt.toISOString(),
-    }));
+    }))
 
-    res.json(transformedComplaints);
+    res.json(transformedComplaints)
   } catch (err) {
-    console.error("Error fetching unassigned complaints:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error fetching unassigned complaints:", err)
+    res.status(500).json({ message: "Server error" })
   }
-};
+}
 
 const getComplaints = async (req, res) => {
   try {
@@ -180,59 +179,59 @@ const getComplaints = async (req, res) => {
       endDate,
       sortBy = "-createdAt",
       sortOrder = "desc",
-    } = req.query;
+    } = req.query
 
-    const filter = {};
-    if (status) filter.status = status;
-    if (category) filter.category = category;
-    if (priority) filter.priority = priority;
+    const filter = {}
+    if (status) filter.status = status
+    if (category) filter.category = category
+    if (priority) filter.priority = priority
     if (search) {
-      const escapedSearch = escapeRegExp(search);
+      const escapedSearch = escapeRegExp(search)
       filter.$or = [
         { title: { $regex: escapedSearch, $options: "i" } },
         { description: { $regex: escapedSearch, $options: "i" } },
         { caseNumber: { $regex: escapedSearch, $options: "i" } },
-      ];
+      ]
     }
     if (startDate || endDate) {
-      filter.createdAt = {};
-      if (startDate) filter.createdAt.$gte = new Date(startDate);
-      if (endDate) filter.createdAt.$lte = new Date(endDate);
+      filter.createdAt = {}
+      if (startDate) filter.createdAt.$gte = new Date(startDate)
+      if (endDate) filter.createdAt.$lte = new Date(endDate)
     }
 
-    let sortOption = {};
+    let sortOption = {}
     const allowedSortFields = [
       "createdAt",
       "updatedAt",
       "priority",
       "status",
       "category",
-    ];
+    ]
 
-    let sortField = sortBy.startsWith("-") ? sortBy.substring(1) : sortBy;
-    let actualSortOrder = sortBy.startsWith("-") ? -1 : 1;
+    let sortField = sortBy.startsWith("-") ? sortBy.substring(1) : sortBy
+    let actualSortOrder = sortBy.startsWith("-") ? -1 : 1
 
     if (sortOrder === "asc") {
-      actualSortOrder = 1;
+      actualSortOrder = 1
     } else if (sortOrder === "desc") {
-      actualSortOrder = -1;
+      actualSortOrder = -1
     }
 
     if (allowedSortFields.includes(sortField)) {
-      sortOption[sortField] = actualSortOrder;
+      sortOption[sortField] = actualSortOrder
     } else {
-      sortOption = { createdAt: -1 };
+      sortOption = { createdAt: -1 }
     }
 
-    const skip = (page - 1) * limit;
+    const skip = (page - 1) * limit
     const complaints = await Complaint.find(filter)
       .populate("assignedOfficer", "firstName lastName badgeNumber")
       .populate("createdBy", "firstName lastName email")
       .sort(sortOption)
       .skip(skip)
-      .limit(parseInt(limit));
+      .limit(parseInt(limit))
 
-    const total = await Complaint.countDocuments(filter);
+    const total = await Complaint.countDocuments(filter)
 
     const transformedComplaints = complaints.map((complaint) => ({
       id: complaint._id.toString(),
@@ -272,7 +271,7 @@ const getComplaints = async (req, res) => {
       createdBy: complaint.createdBy
         ? complaint.createdBy._id.toString()
         : null,
-    }));
+    }))
 
     res.json({
       complaints: transformedComplaints,
@@ -283,32 +282,32 @@ const getComplaints = async (req, res) => {
         hasNext: page * limit < total,
         hasPrev: page > 1,
       },
-    });
+    })
   } catch (err) {
-    console.error("Error fetching complaints:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error fetching complaints:", err)
+    res.status(500).json({ message: "Server error" })
   }
-};
+}
 
 const getComplaintById = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params
     const complaint = await Complaint.findById(id)
       .populate("assignedOfficer", "firstName lastName badgeNumber")
       .populate("createdBy", "firstName lastName email")
-      .populate("notes.by", "firstName lastName role");
+      .populate("notes.by", "firstName lastName role")
 
     if (!complaint) {
-      return res.status(404).json({ message: "Complaint not found" });
+      return res.status(404).json({ message: "Complaint not found" })
     }
 
     const evidenceFiles = await EvidenceFile.find({
       complaintId: complaint._id,
-    });
+    })
 
     const timelineEvents = await TimelineEvent.find({
       complaintId: complaint._id,
-    }).populate("userId", "firstName lastName");
+    }).populate("userId", "firstName lastName")
 
     const response = {
       id: complaint._id.toString(),
@@ -358,57 +357,57 @@ const getComplaintById = async (req, res) => {
       createdBy: complaint.createdBy
         ? complaint.createdBy._id.toString()
         : null,
-    };
+    }
 
-    res.json(response);
+    res.json(response)
   } catch (err) {
-    console.error("Error fetching complaint:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error fetching complaint:", err)
+    res.status(500).json({ message: "Server error" })
   }
-};
+}
 
 const getDashboardStats = async (req, res) => {
   try {
-    const totalComplaints = await Complaint.countDocuments();
+    const totalComplaints = await Complaint.countDocuments()
     const pendingComplaints = await Complaint.countDocuments({
       status: "pending",
-    });
+    })
     const resolvedComplaints = await Complaint.countDocuments({
       status: "resolved",
-    });
+    })
     const highPriorityComplaints = await Complaint.countDocuments({
       priority: { $in: ["high", "urgent"] },
-    });
+    })
 
     const resolvedCases = await Complaint.find({
       status: "resolved",
       createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }, // Last 30 days
-    });
+    })
 
-    let totalResolutionTime = 0;
-    let resolvedCount = resolvedCases.length;
+    let totalResolutionTime = 0
+    let resolvedCount = resolvedCases.length
 
     resolvedCases.forEach((caseItem) => {
-      const resolutionTime = caseItem.updatedAt - caseItem.createdAt;
-      totalResolutionTime += resolutionTime;
-    });
+      const resolutionTime = caseItem.updatedAt - caseItem.createdAt
+      totalResolutionTime += resolutionTime
+    })
 
     const averageResolutionTime =
       resolvedCount > 0
         ? Math.round(totalResolutionTime / resolvedCount / (1000 * 60 * 60)) // in hours
-        : 0;
+        : 0
 
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const oneWeekAgo = new Date()
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
     const complaintsThisWeek = await Complaint.countDocuments({
       createdAt: { $gte: oneWeekAgo },
-    });
+    })
 
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    const oneMonthAgo = new Date()
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
     const complaintsThisMonth = await Complaint.countDocuments({
       createdAt: { $gte: oneMonthAgo },
-    });
+    })
 
     res.json({
       totalComplaints,
@@ -418,18 +417,18 @@ const getDashboardStats = async (req, res) => {
       averageResolutionTime,
       complaintsThisWeek,
       complaintsThisMonth,
-    });
+    })
   } catch (err) {
-    console.error("Error fetching dashboard stats:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error fetching dashboard stats:", err)
+    res.status(500).json({ message: "Server error" })
   }
-};
+}
 
 const getMyOperatorComplaints = async (req, res) => {
   try {
     const complaints = await Complaint.find({ assignedOfficer: req.user.id })
       .sort({ createdAt: -1 })
-      .populate("assignedOfficer", "firstName lastName badgeNumber");
+      .populate("assignedOfficer", "firstName lastName badgeNumber")
 
     const transformedComplaints = complaints.map((complaint) => ({
       id: complaint._id.toString(),
@@ -455,20 +454,20 @@ const getMyOperatorComplaints = async (req, res) => {
         : undefined,
       createdAt: complaint.createdAt.toISOString(),
       updatedAt: complaint.updatedAt.toISOString(),
-    }));
+    }))
 
-    res.json(transformedComplaints);
+    res.json(transformedComplaints)
   } catch (err) {
-    console.error("Error fetching operator complaints:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error fetching operator complaints:", err)
+    res.status(500).json({ message: "Server error" })
   }
-};
+}
 
 const getMyCivilianComplaints = async (req, res) => {
   try {
     const complaints = await Complaint.find({ createdBy: req.user.id })
       .sort({ createdAt: -1 })
-      .populate("assignedOfficer", "firstName lastName badgeNumber");
+      .populate("assignedOfficer", "firstName lastName badgeNumber")
 
     const transformedComplaints = complaints.map((complaint) => ({
       id: complaint._id.toString(),
@@ -494,62 +493,62 @@ const getMyCivilianComplaints = async (req, res) => {
         : undefined,
       createdAt: complaint.createdAt.toISOString(),
       updatedAt: complaint.updatedAt.toISOString(),
-    }));
+    }))
 
-    res.json(transformedComplaints);
+    res.json(transformedComplaints)
   } catch (err) {
-    console.error("Error fetching civilian complaints:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error fetching civilian complaints:", err)
+    res.status(500).json({ message: "Server error" })
   }
-};
+}
 
 const deleteComplaint = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params
 
-    const complaint = await Complaint.findById(id);
+    const complaint = await Complaint.findById(id)
     if (!complaint) {
-      return res.status(404).json({ message: "Complaint not found" });
+      return res.status(404).json({ message: "Complaint not found" })
     }
 
     if (complaint.createdBy.toString() !== req.user.id) {
       return res
         .status(403)
-        .json({ message: "You can only delete your own complaints" });
+        .json({ message: "You can only delete your own complaints" })
     }
 
     if (complaint.status !== "pending") {
       return res.status(400).json({
         message:
           "Cannot delete complaint that is already assigned or in progress",
-      });
+      })
     }
 
-    await EvidenceFile.deleteMany({ complaintId: id });
-    await TimelineEvent.deleteMany({ complaintId: id });
-    await Notification.deleteMany({ relatedCaseId: id });
-    await Complaint.findByIdAndDelete(id);
+    await EvidenceFile.deleteMany({ complaintId: id })
+    await TimelineEvent.deleteMany({ complaintId: id })
+    await Notification.deleteMany({ relatedCaseId: id })
+    await Complaint.findByIdAndDelete(id)
 
-    res.json({ message: "Complaint deleted successfully" });
+    res.json({ message: "Complaint deleted successfully" })
   } catch (err) {
-    console.error("Error deleting complaint:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error deleting complaint:", err)
+    res.status(500).json({ message: "Server error" })
   }
-};
+}
 
 const trackComplaint = async (req, res) => {
   try {
-    let caseNumber = req.params.caseNumber || req.query.caseNumber;
+    let caseNumber = req.params.caseNumber || req.query.caseNumber
     if (!caseNumber) {
       return res.status(200).json({
         error: "Case number is required",
         complaint: null,
         timeline: [],
         evidence: [],
-      });
+      })
     }
 
-    caseNumber = decodeURIComponent(caseNumber.trim());
+    caseNumber = decodeURIComponent(caseNumber.trim())
 
     if (caseNumber.length < 3) {
       return res.status(200).json({
@@ -557,13 +556,13 @@ const trackComplaint = async (req, res) => {
         complaint: null,
         timeline: [],
         evidence: [],
-      });
+      })
     }
 
     const complaint = await Complaint.findOne({ caseNumber })
       .populate("assignedOfficer", "firstName lastName badgeNumber")
       .populate("createdBy", "firstName lastName email")
-      .lean();
+      .lean()
 
     if (!complaint) {
       return res.status(200).json({
@@ -571,17 +570,17 @@ const trackComplaint = async (req, res) => {
         complaint: null,
         timeline: [],
         evidence: [],
-      });
+      })
     }
 
     const timeline = await TimelineEvent.find({ complaintId: complaint._id })
       .populate("userId", "firstName lastName role")
       .sort({ createdAt: 1 })
-      .lean();
+      .lean()
 
     const evidence = await EvidenceFile.find({
       complaintId: complaint._id,
-    }).lean();
+    }).lean()
 
     const transformedComplaint = {
       id: complaint._id.toString(),
@@ -654,37 +653,37 @@ const trackComplaint = async (req, res) => {
       createdBy: complaint.createdBy
         ? complaint.createdBy._id.toString()
         : null,
-    };
+    }
 
     res.json({
       error: null,
       complaint: transformedComplaint,
       timeline: transformedComplaint.timeline,
       evidence: transformedComplaint.evidence.files,
-    });
+    })
   } catch (err) {
-    console.error("Error tracking complaint:", err);
+    console.error("Error tracking complaint:", err)
     res.status(500).json({
       error: "Server error",
       complaint: null,
       timeline: [],
       evidence: [],
-    });
+    })
   }
-};
+}
 
 // Helper function to determine file type
 const getFileType = (mimetype) => {
-  if (mimetype.startsWith("image/")) return "image";
-  if (mimetype.startsWith("video/")) return "video";
-  if (mimetype.startsWith("audio/")) return "audio";
-  return "document";
-};
+  if (mimetype.startsWith("image/")) return "image"
+  if (mimetype.startsWith("video/")) return "video"
+  if (mimetype.startsWith("audio/")) return "audio"
+  return "document"
+}
 
 const updateComplaintStatus = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { status, note } = req.body;
+    const { id } = req.params
+    const { status, note } = req.body
 
     const validStatuses = [
       "pending",
@@ -692,38 +691,38 @@ const updateComplaintStatus = async (req, res) => {
       "investigating",
       "resolved",
       "closed",
-    ];
+    ]
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ message: "Invalid status provided" });
+      return res.status(400).json({ message: "Invalid status provided" })
     }
 
-    const complaint = await Complaint.findById(id);
+    const complaint = await Complaint.findById(id)
     if (!complaint) {
-      return res.status(404).json({ message: "Complaint not found" });
+      return res.status(404).json({ message: "Complaint not found" })
     }
 
-    const oldStatus = complaint.status;
-    complaint.status = status;
-    await complaint.save();
+    const oldStatus = complaint.status
+    complaint.status = status
+    await complaint.save()
 
-    let timelineEventType = "updated";
+    let timelineEventType = "updated"
     let description = `Status changed from ${oldStatus.replace(
       "_",
       " "
-    )} to ${status.replace("_", " ")}`;
+    )} to ${status.replace("_", " ")}`
 
     if (status === "resolved") {
-      timelineEventType = "resolved";
-      description = "Case marked as resolved";
+      timelineEventType = "resolved"
+      description = "Case marked as resolved"
     } else if (status === "closed") {
-      timelineEventType = "updated";
-      description = "Case marked as closed";
+      timelineEventType = "updated"
+      description = "Case marked as closed"
     }
 
     if (note && timelineEventType !== "resolved") {
-      description += `: ${note}`;
+      description += `: ${note}`
     } else if (note && timelineEventType === "resolved") {
-      description += ` - ${note}`;
+      description += ` - ${note}`
     }
 
     await addTimelineEvent(
@@ -731,11 +730,11 @@ const updateComplaintStatus = async (req, res) => {
       timelineEventType,
       description,
       req.user.id
-    );
+    )
 
     const updatedComplaint = await Complaint.findById(id)
       .populate("assignedOfficer", "firstName lastName badgeNumber")
-      .populate("createdBy", "firstName lastName email");
+      .populate("createdBy", "firstName lastName email")
 
     const response = {
       id: updatedComplaint._id.toString(),
@@ -775,65 +774,65 @@ const updateComplaintStatus = async (req, res) => {
       createdBy: updatedComplaint.createdBy
         ? updatedComplaint.createdBy._id.toString()
         : null,
-    };
+    }
 
-    res.json(response);
+    res.json(response)
   } catch (err) {
-    console.error("Error updating complaint status:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error updating complaint status:", err)
+    res.status(500).json({ message: "Server error" })
   }
-};
+}
 
 const assignComplaint = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { officerId } = req.body;
+    const { id } = req.params
+    const { officerId } = req.body
 
     if (!mongoose.Types.ObjectId.isValid(officerId)) {
-      return res.status(400).json({ message: "Invalid officer ID provided" });
+      return res.status(400).json({ message: "Invalid officer ID provided" })
     }
 
-    const complaint = await Complaint.findById(id);
+    const complaint = await Complaint.findById(id)
     if (!complaint) {
-      return res.status(404).json({ message: "Complaint not found" });
+      return res.status(404).json({ message: "Complaint not found" })
     }
 
-    const oldOfficerId = complaint.assignedOfficer;
-    const wasUnassigned = !oldOfficerId;
-    const isSelfAssignment = req.user.id === officerId;
+    const oldOfficerId = complaint.assignedOfficer
+    const wasUnassigned = !oldOfficerId
+    const isSelfAssignment = req.user.id === officerId
 
-    complaint.assignedOfficer = officerId;
+    complaint.assignedOfficer = officerId
 
     if (wasUnassigned && complaint.status === "pending") {
-      complaint.status = "assigned";
+      complaint.status = "assigned"
     }
-    await complaint.save();
+    await complaint.save()
 
-    const officer = await User.findById(officerId);
+    const officer = await User.findById(officerId)
     let description = `Case assigned to ${
       officer
         ? officer.firstName + " " + officer.lastName
         : "Officer ID: " + officerId
-    }`;
+    }`
 
     if (isSelfAssignment) {
-      description = `Officer ${officer.firstName} ${officer.lastName} self-assigned to this case`;
+      description = `Officer ${officer.firstName} ${officer.lastName} self-assigned to this case`
     } else if (!wasUnassigned) {
       description = `Case reassigned from previous officer to ${
         officer
           ? officer.firstName + " " + officer.lastName
           : "Officer ID: " + officerId
-      }`;
+      }`
     }
 
-    await addTimelineEvent(complaint._id, "assigned", description, req.user.id);
+    await addTimelineEvent(complaint._id, "assigned", description, req.user.id)
 
     if (complaint.createdBy && officer) {
       const notificationTitle = isSelfAssignment
         ? "Officer Self-Assigned to Your Case"
-        : "Officer Assigned to Your Case";
+        : "Officer Assigned to Your Case"
 
-      const notificationMessage = `Officer ${officer.firstName} ${officer.lastName} (Badge: ${officer.badgeNumber}) has been assigned to your case ${complaint.caseNumber}.`;
+      const notificationMessage = `Officer ${officer.firstName} ${officer.lastName} (Badge: ${officer.badgeNumber}) has been assigned to your case ${complaint.caseNumber}.`
 
       await createNotification(
         complaint.createdBy,
@@ -847,12 +846,12 @@ const assignComplaint = async (req, res) => {
           officerName: `${officer.firstName} ${officer.lastName}`,
           officerBadgeNumber: officer.badgeNumber,
         }
-      );
+      )
     }
 
     const updatedComplaint = await Complaint.findById(id)
       .populate("assignedOfficer", "firstName lastName badgeNumber")
-      .populate("createdBy", "firstName lastName email");
+      .populate("createdBy", "firstName lastName email")
 
     const response = {
       id: updatedComplaint._id.toString(),
@@ -892,47 +891,47 @@ const assignComplaint = async (req, res) => {
       createdBy: updatedComplaint.createdBy
         ? updatedComplaint.createdBy._id.toString()
         : null,
-    };
+    }
 
-    res.json(response);
+    res.json(response)
   } catch (err) {
-    console.error("Error assigning complaint:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error assigning complaint:", err)
+    res.status(500).json({ message: "Server error" })
   }
-};
+}
 
 const addNote = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { note } = req.body;
+    const { id } = req.params
+    const { note } = req.body
 
     if (!note || note.trim() === "") {
-      return res.status(400).json({ message: "Note text cannot be empty" });
+      return res.status(400).json({ message: "Note text cannot be empty" })
     }
 
-    const complaint = await Complaint.findById(id);
+    const complaint = await Complaint.findById(id)
     if (!complaint) {
-      return res.status(404).json({ message: "Complaint not found" });
+      return res.status(404).json({ message: "Complaint not found" })
     }
 
     complaint.notes.push({
       text: note.trim(),
       by: req.user.id,
       createdAt: new Date(),
-    });
-    await complaint.save();
+    })
+    await complaint.save()
 
     await addTimelineEvent(
       complaint._id,
       "updated",
       `Note added: ${note.trim()}`,
       req.user.id
-    );
+    )
 
     const updatedComplaint = await Complaint.findById(id)
       .populate("assignedOfficer", "firstName lastName badgeNumber")
       .populate("createdBy", "firstName lastName email")
-      .populate("notes.by", "firstName lastName role");
+      .populate("notes.by", "firstName lastName role")
 
     const response = {
       id: updatedComplaint._id.toString(),
@@ -978,13 +977,13 @@ const addNote = async (req, res) => {
       createdBy: updatedComplaint.createdBy
         ? updatedComplaint.createdBy._id.toString()
         : null,
-    };
-    res.json(response);
+    }
+    res.json(response)
   } catch (err) {
-    console.error("Error adding note to complaint:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error adding note to complaint:", err)
+    res.status(500).json({ message: "Server error" })
   }
-};
+}
 
 // Notification Controller Methods
 const createNotification = async (
@@ -1005,21 +1004,21 @@ const createNotification = async (
       relatedCaseId,
       relatedOfficerId,
       metadata,
-    });
-    await notification.save();
-    return notification;
+    })
+    await notification.save()
+    return notification
   } catch (error) {
-    console.error("Error creating notification:", error);
+    console.error("Error creating notification:", error)
   }
-};
+}
 
 const getNotifications = async (req, res) => {
   try {
-    const { page = 1, limit = 20, unreadOnly = false } = req.query;
-    const query = { userId: req.user.id };
+    const { page = 1, limit = 20, unreadOnly = false } = req.query
+    const query = { userId: req.user.id }
 
     if (unreadOnly === "true") {
-      query.isRead = false;
+      query.isRead = false
     }
 
     const notifications = await Notification.find(query)
@@ -1027,13 +1026,13 @@ const getNotifications = async (req, res) => {
       .populate("relatedCaseId", "caseNumber title")
       .sort({ createdAt: -1 })
       .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .skip((page - 1) * limit)
 
-    const totalNotifications = await Notification.countDocuments(query);
+    const totalNotifications = await Notification.countDocuments(query)
     const unreadCount = await Notification.countDocuments({
       userId: req.user.id,
       isRead: false,
-    });
+    })
 
     res.json({
       notifications,
@@ -1041,59 +1040,59 @@ const getNotifications = async (req, res) => {
       unreadCount,
       currentPage: page,
       totalPages: Math.ceil(totalNotifications / limit),
-    });
+    })
   } catch (error) {
-    console.error("Error fetching notifications:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error fetching notifications:", error)
+    res.status(500).json({ message: "Server error" })
   }
-};
+}
 
 const markNotificationAsRead = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params
 
     const notification = await Notification.findOneAndUpdate(
       { _id: id, userId: req.user.id },
       { isRead: true },
       { new: true }
-    );
+    )
 
     if (!notification) {
-      return res.status(404).json({ message: "Notification not found" });
+      return res.status(404).json({ message: "Notification not found" })
     }
 
-    res.json({ message: "Notification marked as read" });
+    res.json({ message: "Notification marked as read" })
   } catch (error) {
-    console.error("Error marking notification as read:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error marking notification as read:", error)
+    res.status(500).json({ message: "Server error" })
   }
-};
+}
 
 const markAllNotificationsAsRead = async (req, res) => {
   try {
     await Notification.updateMany(
       { userId: req.user.id, isRead: false },
       { isRead: true }
-    );
+    )
 
-    res.json({ message: "All notifications marked as read" });
+    res.json({ message: "All notifications marked as read" })
   } catch (error) {
-    console.error("Error marking all notifications as read:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error marking all notifications as read:", error)
+    res.status(500).json({ message: "Server error" })
   }
-};
+}
 
 // Report controller methods
 const getComplaintsByCategory = async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
-    const matchCondition = {};
+    const { startDate, endDate } = req.query
+    const matchCondition = {}
 
     if (startDate && endDate) {
       matchCondition.createdAt = {
         $gte: new Date(startDate),
         $lte: new Date(endDate),
-      };
+      }
     }
 
     const complaintsByCategory = await Complaint.aggregate([
@@ -1107,25 +1106,25 @@ const getComplaintsByCategory = async (req, res) => {
       {
         $sort: { count: -1 },
       },
-    ]);
+    ])
 
-    res.json(complaintsByCategory);
+    res.json(complaintsByCategory)
   } catch (err) {
-    console.error("Error fetching complaints by category:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error fetching complaints by category:", err)
+    res.status(500).json({ message: "Server error" })
   }
-};
+}
 
 const getComplaintsByStatus = async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
-    const matchCondition = {};
+    const { startDate, endDate } = req.query
+    const matchCondition = {}
 
     if (startDate && endDate) {
       matchCondition.createdAt = {
         $gte: new Date(startDate),
         $lte: new Date(endDate),
-      };
+      }
     }
 
     const complaintsByStatus = await Complaint.aggregate([
@@ -1136,25 +1135,25 @@ const getComplaintsByStatus = async (req, res) => {
           count: { $sum: 1 },
         },
       },
-    ]);
+    ])
 
-    res.json(complaintsByStatus);
+    res.json(complaintsByStatus)
   } catch (err) {
-    console.error("Error fetching complaints by status:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error fetching complaints by status:", err)
+    res.status(500).json({ message: "Server error" })
   }
-};
+}
 
 const getComplaintsByPriority = async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
-    const matchCondition = {};
+    const { startDate, endDate } = req.query
+    const matchCondition = {}
 
     if (startDate && endDate) {
       matchCondition.createdAt = {
         $gte: new Date(startDate),
         $lte: new Date(endDate),
-      };
+      }
     }
 
     const complaintsByPriority = await Complaint.aggregate([
@@ -1165,54 +1164,54 @@ const getComplaintsByPriority = async (req, res) => {
           count: { $sum: 1 },
         },
       },
-    ]);
+    ])
 
-    res.json(complaintsByPriority);
+    res.json(complaintsByPriority)
   } catch (err) {
-    console.error("Error fetching complaints by priority:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error fetching complaints by priority:", err)
+    res.status(500).json({ message: "Server error" })
   }
-};
+}
 
 const getComplaintsOverTime = async (req, res) => {
   try {
-    const { startDate, endDate, interval = "day" } = req.query;
-    const matchCondition = {};
+    const { startDate, endDate, interval = "day" } = req.query
+    const matchCondition = {}
 
     if (startDate && endDate) {
       matchCondition.createdAt = {
         $gte: new Date(startDate),
         $lte: new Date(endDate),
-      };
+      }
     }
 
-    let dateFormat;
+    let dateFormat
     switch (interval) {
       case "hour":
         dateFormat = {
           $dateToString: { format: "%Y-%m-%d %H:00", date: "$createdAt" },
-        };
-        break;
+        }
+        break
       case "day":
         dateFormat = {
           $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
-        };
-        break;
+        }
+        break
       case "week":
         dateFormat = {
           $dateToString: {
             format: "%Y-W%V",
             date: "$createdAt",
           },
-        };
-        break;
+        }
+        break
       case "month":
-        dateFormat = { $dateToString: { format: "%Y-%m", date: "$createdAt" } };
-        break;
+        dateFormat = { $dateToString: { format: "%Y-%m", date: "$createdAt" } }
+        break
       default:
         dateFormat = {
           $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
-        };
+        }
     }
 
     const complaintsOverTime = await Complaint.aggregate([
@@ -1226,14 +1225,156 @@ const getComplaintsOverTime = async (req, res) => {
       {
         $sort: { _id: 1 },
       },
-    ]);
+    ])
 
-    res.json(complaintsOverTime);
+    res.json(complaintsOverTime)
   } catch (err) {
-    console.error("Error fetching complaints over time:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error fetching complaints over time:", err)
+    res.status(500).json({ message: "Server error" })
   }
-};
+}
+
+const getOfficerPerformance = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query
+    const matchCondition = {
+      assignedOfficer: { $exists: true, $ne: null },
+    }
+
+    if (startDate && endDate) {
+      matchCondition.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      }
+    }
+
+    const officerPerformance = await Complaint.aggregate([
+      { $match: matchCondition },
+      {
+        $lookup: {
+          from: "users",
+          localField: "assignedOfficer",
+          foreignField: "_id",
+          as: "officer",
+        },
+      },
+      {
+        $unwind: "$officer",
+      },
+      {
+        $group: {
+          _id: {
+            officerId: "$assignedOfficer",
+            officerName: {
+              $concat: ["$officer.firstName", " ", "$officer.lastName"],
+            },
+            badgeNumber: "$officer.badgeNumber",
+          },
+          totalAssigned: { $sum: 1 },
+          resolved: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "resolved"] }, 1, 0],
+            },
+          },
+          closed: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "closed"] }, 1, 0],
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          officerId: "$_id.officerId",
+          officerName: "$_id.officerName",
+          badgeNumber: "$_id.badgeNumber",
+          totalAssigned: 1,
+          resolved: 1,
+          closed: 1,
+          resolutionRate: {
+            $cond: [
+              { $eq: ["$totalAssigned", 0] },
+              0,
+              {
+                $multiply: [
+                  {
+                    $divide: [
+                      { $add: ["$resolved", "$closed"] },
+                      "$totalAssigned",
+                    ],
+                  },
+                  100,
+                ],
+              },
+            ],
+          },
+        },
+      },
+      {
+        $sort: { resolutionRate: -1 },
+      },
+    ])
+
+    res.json(officerPerformance)
+  } catch (err) {
+    console.error("Error fetching officer performance:", err)
+    res.status(500).json({ message: "Server error" })
+  }
+}
+
+const getResolutionTimeStats = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query
+    const matchCondition = {
+      status: { $in: ["resolved", "closed"] },
+      createdAt: { $exists: true },
+      updatedAt: { $exists: true },
+    }
+
+    if (startDate && endDate) {
+      matchCondition.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      }
+    }
+
+    const resolutionStats = await Complaint.aggregate([
+      { $match: matchCondition },
+      {
+        $project: {
+          resolutionTimeHours: {
+            $divide: [
+              { $subtract: ["$updatedAt", "$createdAt"] },
+              1000 * 60 * 60, // Convert milliseconds to hours
+            ],
+          },
+          category: 1,
+          priority: 1,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          averageResolutionTime: { $avg: "$resolutionTimeHours" },
+          minResolutionTime: { $min: "$resolutionTimeHours" },
+          maxResolutionTime: { $max: "$resolutionTimeHours" },
+          resolutionTimesByCategory: {
+            $push: {
+              category: "$category",
+              resolutionTime: "$resolutionTimeHours",
+            },
+          },
+        },
+      },
+    ])
+
+    res.json(resolutionStats[0] || {})
+  } catch (err) {
+    console.error("Error fetching resolution time stats:", err)
+    res.status(500).json({ message: "Server error" })
+  }
+}
 
 export {
   createComplaint,
@@ -1255,4 +1396,6 @@ export {
   getComplaintsByStatus,
   getComplaintsByPriority,
   getComplaintsOverTime,
-};
+  getOfficerPerformance,
+  getResolutionTimeStats,
+}
