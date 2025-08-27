@@ -17,6 +17,8 @@ import {
   getUnassignedComplaints,
   getComplaintsByCategory,
   getComplaintsByStatus,
+  getComplaintsByPriority,
+  getComplaintsOverTime,
 } from "../controllers/ComplaintController.js";
 
 import authenticateToken from "../middleware/authenticateToken.js";
@@ -55,5 +57,7 @@ router.patch(
 
 router.get("/reports/category", authenticateToken, getComplaintsByCategory);
 router.get("/reports/status", authenticateToken, getComplaintsByStatus);
+router.get("/reports/priority", authenticateToken, getComplaintsByPriority);
+router.get("/reports/over-time", authenticateToken, getComplaintsOverTime);
 
 export default router;

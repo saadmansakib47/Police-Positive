@@ -1145,6 +1145,96 @@ const getComplaintsByStatus = async (req, res) => {
   }
 };
 
+const getComplaintsByPriority = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const matchCondition = {};
+
+    if (startDate && endDate) {
+      matchCondition.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      };
+    }
+
+    const complaintsByPriority = await Complaint.aggregate([
+      { $match: matchCondition },
+      {
+        $group: {
+          _id: "$priority",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    res.json(complaintsByPriority);
+  } catch (err) {
+    console.error("Error fetching complaints by priority:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+const getComplaintsOverTime = async (req, res) => {
+  try {
+    const { startDate, endDate, interval = "day" } = req.query;
+    const matchCondition = {};
+
+    if (startDate && endDate) {
+      matchCondition.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      };
+    }
+
+    let dateFormat;
+    switch (interval) {
+      case "hour":
+        dateFormat = {
+          $dateToString: { format: "%Y-%m-%d %H:00", date: "$createdAt" },
+        };
+        break;
+      case "day":
+        dateFormat = {
+          $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+        };
+        break;
+      case "week":
+        dateFormat = {
+          $dateToString: {
+            format: "%Y-W%V",
+            date: "$createdAt",
+          },
+        };
+        break;
+      case "month":
+        dateFormat = { $dateToString: { format: "%Y-%m", date: "$createdAt" } };
+        break;
+      default:
+        dateFormat = {
+          $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+        };
+    }
+
+    const complaintsOverTime = await Complaint.aggregate([
+      { $match: matchCondition },
+      {
+        $group: {
+          _id: dateFormat,
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { _id: 1 },
+      },
+    ]);
+
+    res.json(complaintsOverTime);
+  } catch (err) {
+    console.error("Error fetching complaints over time:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 export {
   createComplaint,
   getComplaints,
@@ -1163,4 +1253,6 @@ export {
   markAllNotificationsAsRead,
   getComplaintsByCategory,
   getComplaintsByStatus,
+  getComplaintsByPriority,
+  getComplaintsOverTime,
 };
