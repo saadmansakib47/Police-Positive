@@ -20,6 +20,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { complaintsAPI } from '@/lib/api/complaints';
 import { Complaint } from '@/types/complaint';
 import { Trash2, Eye, Calendar, AlertCircle } from 'lucide-react';
+import Chatbox from '@/components/chat/Chatbox';
 
 
 import {
@@ -50,6 +51,7 @@ const Civilian = () => {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
+  const [chatOpen, setChatOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -194,23 +196,30 @@ const Civilian = () => {
             </Button>
           </CardContent>
         </Card>
-
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageCircle className="h-5 w-5 text-purple-600" />
-              AI Assistant
-            </CardTitle>
-            <CardDescription>
-              Get help with reporting and legal guidance
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" className="w-full" disabled>
-              Chat Now (Coming Soon)
-            </Button>
-          </CardContent>
-        </Card>
+        
+        <div>
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5 text-purple-600" />
+                AI Assistant
+              </CardTitle>
+              <CardDescription>
+                Get help with reporting and legal guidance
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setChatOpen(true)}
+              >
+                Chat Now
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+        <Chatbox open={chatOpen} setOpen={setChatOpen} />
 
         <Card className="hover:shadow-lg transition-shadow cursor-pointer">
           <CardHeader>

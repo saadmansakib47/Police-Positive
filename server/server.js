@@ -7,6 +7,7 @@ import path from "path"
 import fs from "fs"
 import { fileURLToPath } from "url"
 
+
 dotenv.config()
 
 const app = express()
@@ -30,6 +31,7 @@ app.use(
     origin: "*",
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    
   })
 )
 app.use(express.json())
@@ -54,10 +56,15 @@ app.use("/uploads", express.static(uploadsDir))
 import authRouter from "./routes/AuthRouter.js"
 import complaintRouter from "./routes/ComplaintRouter.js"
 import userRouter from "./routes/UserRouter.js"
+import chatRouter from "./routes/ChatRouter.js"
+import NewsRouter from "./routes/NewsRouter.js"
 
 app.use("/api/auth", authRouter)
 app.use("/api/complaints", complaintRouter)
 app.use("/api/users", userRouter)
+app.use("/api/chat", chatRouter)
+app.use("/api/news", NewsRouter)
+
 
 // ========================
 // Error Handling

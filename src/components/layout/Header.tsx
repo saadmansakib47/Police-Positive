@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import QuickReportDialog from '@/components/landing/QuickReportDialog';
 import NotificationBell from '@/components/common/NotificationBell';
+import BreakingNewsBar from '../breakingnews/BreakingNewsBar';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -105,7 +106,11 @@ const Header = () => {
             <Link to="/contact" className="text-gray-600 hover:text-blue-600 transition-colors">
               Contact
             </Link>
+            <Link to="/news" className="text-gray-600 hover:text-blue-600 transition-colors">
+              News
+            </Link>
           </nav>
+
 
           {/* Right side */}
           <div className="hidden md:flex items-center space-x-4">
@@ -257,6 +262,9 @@ const Header = () => {
             </nav>
           </div>
         )}
+      </div>
+      <div>
+        <BreakingNewsBar />
       </div>
     </header>
   );
