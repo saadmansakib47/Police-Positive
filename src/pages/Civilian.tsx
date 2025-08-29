@@ -118,7 +118,7 @@ const Civilian = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">My Reports</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Reports</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -271,8 +271,8 @@ const Civilian = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" className="w-full" disabled>
-              Learn More (Coming Soon)
+            <Button asChild className="w-full">
+              <Link to="/safety-tips">View Safety Guide</Link>
             </Button>
           </CardContent>
         </Card>

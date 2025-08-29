@@ -22,6 +22,7 @@ import Report from "./pages/Report";
 import Track from "./pages/Track";
 import Patrol from "./pages/Patrol";
 import NotFound from "./pages/NotFound";
+import SafetyTips from "./pages/SafetyTips";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,7 @@ function App() {
                     <Route path="features" element={<Features />} />
                     <Route path="contact" element={<Contact />} />
                     <Route path="news" element={<News />} />
+                    <Route path="safety-tips" element={<SafetyTips />} />
 
                     {/* Role-specific */}
                     <Route
