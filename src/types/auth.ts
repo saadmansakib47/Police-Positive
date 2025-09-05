@@ -3,11 +3,11 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'civilian' | 'operator' | 'supervisor' | 'patrol';
+  role: "civilian" | "operator" | "supervisor" | "patrol";
   badgeNumber?: string; // For police roles
   department?: string; // For police roles
-  phone?: string;       // Optional for anyone
-  address?: string;     // Optional for civilians (frontend only)
+  phone?: string; // Optional for anyone
+  address?: string; // Optional for civilians (frontend only)
 }
 
 export interface AuthState {
@@ -27,7 +27,7 @@ export interface RegisterData {
   password: string;
   firstName: string;
   lastName: string;
-  role: 'civilian' | 'operator' | 'supervisor' | 'patrol';
+  role: "civilian" | "operator" | "supervisor" | "patrol";
   address?: string; // optional frontend-only
   badgeNumber?: string;
   department?: string;

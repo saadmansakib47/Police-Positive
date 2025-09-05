@@ -1,45 +1,80 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { MapPin, Upload, X, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
-import { CreateComplaintData } from '@/types/complaint';
-import { useAuth } from '@/hooks/useAuth';
-import { toast } from 'sonner';
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { MapPin, Upload, X, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  FormDescription,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { CreateComplaintData } from "@/types/complaint";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
-const crimeReportSchema = z.object({
-  type: z.enum(['GD', 'FIR']),
-  category: z.enum(['theft', 'assault', 'fraud', 'domestic', 'traffic', 'cybercrime', 'other']),
-  title: z.string().min(5, 'Title must be at least 5 characters'),
-  description: z.string().min(20, 'Description must be at least 20 characters'),
-  location: z.object({
-    address: z.string().min(10, 'Please provide a detailed address'),
-  }),
-  reporterInfo: z.object({
-    name: z.string().optional(),
-    phone: z.string().min(10, 'Valid phone number required'),
-    email: z.string().email().optional().or(z.literal('')),
-    isAnonymous: z.boolean(),
-  }),
-}).refine((data) => {
-  if (!data.reporterInfo.isAnonymous && !data.reporterInfo.name) {
-    return false;
-  }
-  return true;
-}, {
-  message: "Name is required for non-anonymous reports",
-  path: ["reporterInfo.name"],
-});
+const crimeReportSchema = z
+  .object({
+    type: z.enum(["GD", "FIR"]),
+    category: z.enum([
+      "theft",
+      "assault",
+      "fraud",
+      "domestic",
+      "traffic",
+      "cybercrime",
+      "other",
+    ]),
+    title: z.string().min(5, "Title must be at least 5 characters"),
+    description: z
+      .string()
+      .min(20, "Description must be at least 20 characters"),
+    location: z.object({
+      address: z.string().min(10, "Please provide a detailed address"),
+    }),
+    reporterInfo: z.object({
+      name: z.string().optional(),
+      phone: z.string().min(10, "Valid phone number required"),
+      email: z.string().email().optional().or(z.literal("")),
+      isAnonymous: z.boolean(),
+    }),
+  })
+  .refine(
+    (data) => {
+      if (!data.reporterInfo.isAnonymous && !data.reporterInfo.name) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "Name is required for non-anonymous reports",
+      path: ["reporterInfo.name"],
+    }
+  );
 
 type CrimeReportFormData = z.infer<typeof crimeReportSchema>;
 
@@ -49,50 +84,80 @@ interface CrimeReportFormProps {
 }
 
 const categoryOptions = [
-  { value: 'theft', label: 'Theft/Burglary', description: 'Stolen property, break-ins' },
-  { value: 'assault', label: 'Assault/Violence', description: 'Physical harm, threats' },
-  { value: 'fraud', label: 'Fraud/Scam', description: 'Financial fraud, cheating' },
-  { value: 'domestic', label: 'Domestic Violence', description: 'Family/relationship violence' },
-  { value: 'traffic', label: 'Traffic Violation', description: 'Road accidents, violations' },
-  { value: 'cybercrime', label: 'Cybercrime', description: 'Online fraud, hacking' },
-  { value: 'other', label: 'Other', description: 'Other criminal activities' },
+  {
+    value: "theft",
+    label: "Theft/Burglary",
+    description: "Stolen property, break-ins",
+  },
+  {
+    value: "assault",
+    label: "Assault/Violence",
+    description: "Physical harm, threats",
+  },
+  {
+    value: "fraud",
+    label: "Fraud/Scam",
+    description: "Financial fraud, cheating",
+  },
+  {
+    value: "domestic",
+    label: "Domestic Violence",
+    description: "Family/relationship violence",
+  },
+  {
+    value: "traffic",
+    label: "Traffic Violation",
+    description: "Road accidents, violations",
+  },
+  {
+    value: "cybercrime",
+    label: "Cybercrime",
+    description: "Online fraud, hacking",
+  },
+  { value: "other", label: "Other", description: "Other criminal activities" },
 ];
 
-const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading = false }) => {
+const CrimeReportForm: React.FC<CrimeReportFormProps> = ({
+  onSubmit,
+  isLoading = false,
+}) => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const { user } = useAuth();
 
+  const actualUser = (user as any)?.user || user;
+
   const form = useForm<CrimeReportFormData>({
     resolver: zodResolver(crimeReportSchema),
     defaultValues: {
-      type: 'GD',
-      category: 'other',
-      title: '',
-      description: '',
+      type: "GD",
+      category: "other",
+      title: "",
+      description: "",
       location: {
-        address: '',
+        address: "",
       },
       reporterInfo: {
-        name: user?.firstName || '',
-        phone: user?.phone || '',
-        email: user?.email || '',
+        name: actualUser?.firstName || "",
+        phone: actualUser?.phone || "",
+        email: actualUser?.email || "",
         isAnonymous: false,
       },
     },
   });
 
-  const isAnonymous = form.watch('reporterInfo.isAnonymous');
-  const selectedCategory = form.watch('category');
-  const reportType = form.watch('type');
+  const isAnonymous = form.watch("reporterInfo.isAnonymous");
+  const selectedCategory = form.watch("category");
+  const reportType = form.watch("type");
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
-    const validFiles = files.filter(file => {
-      const isValidType = file.type.startsWith('image/') ||
-        file.type.startsWith('video/') ||
-        file.type.startsWith('audio/') ||
-        file.type === 'application/pdf';
+    const validFiles = files.filter((file) => {
+      const isValidType =
+        file.type.startsWith("image/") ||
+        file.type.startsWith("video/") ||
+        file.type.startsWith("audio/") ||
+        file.type === "application/pdf";
       const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB limit
 
       if (!isValidType) {
@@ -106,16 +171,16 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
       return true;
     });
 
-    setSelectedFiles(prev => [...prev, ...validFiles].slice(0, 5)); // Max 5 files
+    setSelectedFiles((prev) => [...prev, ...validFiles].slice(0, 5)); // Max 5 files
   };
 
   const removeFile = (index: number) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported by this browser');
+      toast.error("Geolocation is not supported by this browser");
       return;
     }
 
@@ -124,13 +189,16 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
       (position) => {
         const { latitude, longitude } = position.coords;
         // In a real app, you'd reverse geocode these coordinates
-        form.setValue('location.address', `Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`);
+        form.setValue(
+          "location.address",
+          `Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`
+        );
         setIsGettingLocation(false);
-        toast.success('Location detected successfully');
+        toast.success("Location detected successfully");
       },
       (error) => {
         setIsGettingLocation(false);
-        toast.error('Unable to get your location. Please enter manually.');
+        toast.error("Unable to get your location. Please enter manually.");
       }
     );
   };
@@ -151,17 +219,17 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
         description: data.description,
         location: {
           address: data.location.address,
-          coordinates: undefined
+          coordinates: undefined,
         },
         reporterInfo: {
           name: data.reporterInfo.name,
           phone: data.reporterInfo.phone,
           email: data.reporterInfo.email,
-          isAnonymous: data.reporterInfo.isAnonymous
+          isAnonymous: data.reporterInfo.isAnonymous,
         },
         evidence: {
-          files: selectedFiles
-        }
+          files: selectedFiles,
+        },
       });
 
       // Reset form
@@ -182,7 +250,8 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
             Report Type
           </CardTitle>
           <CardDescription>
-            Choose the appropriate report type based on the severity of the incident
+            Choose the appropriate report type based on the severity of the
+            incident
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -199,29 +268,43 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
                       className="grid grid-cols-1 md:grid-cols-2 gap-4"
                     >
                       <div>
-                        <RadioGroupItem value="GD" id="GD" className="peer sr-only" />
+                        <RadioGroupItem
+                          value="GD"
+                          id="GD"
+                          className="peer sr-only"
+                        />
                         <Label
                           htmlFor="GD"
                           className="flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-gray-100 peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                         >
                           <div className="space-y-1">
-                            <div className="font-semibold">General Diary (GD)</div>
+                            <div className="font-semibold">
+                              General Diary (GD)
+                            </div>
                             <div className="text-sm text-muted-foreground">
-                              For non-cognizable offenses, complaints & general information
+                              For non-cognizable offenses, complaints & general
+                              information
                             </div>
                           </div>
                         </Label>
                       </div>
                       <div>
-                        <RadioGroupItem value="FIR" id="FIR" className="peer sr-only" />
+                        <RadioGroupItem
+                          value="FIR"
+                          id="FIR"
+                          className="peer sr-only"
+                        />
                         <Label
                           htmlFor="FIR"
                           className="flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-gray-100 peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                         >
                           <div className="space-y-1">
-                            <div className="font-semibold">First Information Report (FIR)</div>
+                            <div className="font-semibold">
+                              First Information Report (FIR)
+                            </div>
                             <div className="text-sm text-muted-foreground">
-                              For cognizable offenses requiring immediate police action
+                              For cognizable offenses requiring immediate police
+                              action
                             </div>
                           </div>
                         </Label>
@@ -246,7 +329,10 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            <form
+              onSubmit={form.handleSubmit(handleSubmit)}
+              className="space-y-6"
+            >
               {/* Category Selection */}
               <FormField
                 control={form.control}
@@ -254,7 +340,10 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select incident category" />
@@ -265,7 +354,9 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
                           <SelectItem key={option.value} value={option.value}>
                             <div className="flex flex-col items-start">
                               <span>{option.label}</span>
-                              <span className="text-xs text-muted-foreground">{option.description}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {option.description}
+                              </span>
                             </div>
                           </SelectItem>
                         ))}
@@ -290,7 +381,8 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
                       />
                     </FormControl>
                     <FormDescription>
-                      Provide a clear, concise title (e.g., "Motorcycle theft from parking lot")
+                      Provide a clear, concise title (e.g., "Motorcycle theft
+                      from parking lot")
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -312,7 +404,8 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
                       />
                     </FormControl>
                     <FormDescription>
-                      Include as much detail as possible: time, date, people involved, sequence of events
+                      Include as much detail as possible: time, date, people
+                      involved, sequence of events
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -340,11 +433,16 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
                         onClick={getCurrentLocation}
                         disabled={isGettingLocation}
                       >
-                        <MapPin className={`h-4 w-4 ${isGettingLocation ? 'animate-pulse' : ''}`} />
+                        <MapPin
+                          className={`h-4 w-4 ${
+                            isGettingLocation ? "animate-pulse" : ""
+                          }`}
+                        />
                       </Button>
                     </div>
                     <FormDescription>
-                      Provide the exact address or location details. Click the map icon to use your current location.
+                      Provide the exact address or location details. Click the
+                      map icon to use your current location.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -367,9 +465,7 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
                         />
                       </FormControl>
                       <div className="space-y-1 leading-none">
-                        <FormLabel>
-                          Submit anonymously
-                        </FormLabel>
+                        <FormLabel>Submit anonymously</FormLabel>
                         <FormDescription>
                           Your identity will be kept confidential
                         </FormDescription>
@@ -387,7 +483,10 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
                         <FormItem>
                           <FormLabel>Full Name *</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter your full name" {...field} />
+                            <Input
+                              placeholder="Enter your full name"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -401,7 +500,11 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
                         <FormItem>
                           <FormLabel>Email (Optional)</FormLabel>
                           <FormControl>
-                            <Input type="email" placeholder="Enter your email" {...field} />
+                            <Input
+                              type="email"
+                              placeholder="Enter your email"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -417,7 +520,10 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
                     <FormItem>
                       <FormLabel>Phone Number *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your phone number" {...field} />
+                        <Input
+                          placeholder="Enter your phone number"
+                          {...field}
+                        />
                       </FormControl>
                       <FormDescription>
                         Required for follow-up communication
@@ -433,7 +539,8 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
                 <div>
                   <Label htmlFor="evidence">Evidence (Optional)</Label>
                   <p className="text-sm text-muted-foreground mb-2">
-                    Upload photos, videos, audio recordings, or documents related to the incident
+                    Upload photos, videos, audio recordings, or documents
+                    related to the incident
                   </p>
                 </div>
 
@@ -466,10 +573,13 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
                     <Label>Selected Files:</Label>
                     <div className="space-y-2">
                       {selectedFiles.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-2 bg-muted rounded"
+                        >
                           <div className="flex items-center space-x-2">
                             <Badge variant="outline">
-                              {file.type.split('/')[0]}
+                              {file.type.split("/")[0]}
                             </Badge>
                             <span className="text-sm">{file.name}</span>
                             <span className="text-xs text-muted-foreground">
@@ -493,12 +603,8 @@ const CrimeReportForm: React.FC<CrimeReportFormProps> = ({ onSubmit, isLoading =
 
               {/* Submit Buttons */}
               <div className="flex gap-4 pt-6">
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="flex-1"
-                >
-                  {isLoading ? 'Submitting...' : `Submit ${reportType}`}
+                <Button type="submit" disabled={isLoading} className="flex-1">
+                  {isLoading ? "Submitting..." : `Submit ${reportType}`}
                 </Button>
                 <Button
                   type="button"

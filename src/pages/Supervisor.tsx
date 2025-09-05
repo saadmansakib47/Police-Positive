@@ -1,34 +1,77 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line, AreaChart, Area
-} from 'recharts';
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+} from "recharts";
 import {
-  TrendingUp, Clock, CheckCircle, AlertTriangle, FileText, RotateCcw,
-  BarChartIcon, PieChartIcon, LineChartIcon
-} from 'lucide-react';
-import SEO from '@/components/SEO';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/hooks/useAuth';
-import { complaintsAPI } from '@/lib/api/complaints';
-import { Complaint, Officer } from '@/types/complaint';
-import { useToast } from '@/hooks/use-toast';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+  TrendingUp,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  FileText,
+  RotateCcw,
+  BarChartIcon,
+  PieChartIcon,
+  LineChartIcon,
+} from "lucide-react";
+import SEO from "@/components/SEO";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/useAuth";
+import { complaintsAPI } from "@/lib/api/complaints";
+import { Complaint, Officer } from "@/types/complaint";
+import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select as SelectComponent,
   SelectContent as SelectContentComponent,
   SelectItem as SelectItemComponent,
   SelectTrigger as SelectTriggerComponent,
   SelectValue as SelectValueComponent,
-} from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d'];
+const COLORS = [
+  "#0088FE",
+  "#00C49F",
+  "#FFBB28",
+  "#FF8042",
+  "#8884D8",
+  "#82ca9d",
+];
 
 interface CrimeStatistics {
   totalReports: number;
@@ -42,10 +85,10 @@ interface CrimeStatistics {
 }
 
 interface ChartData {
-  categoryData: { _id: string, count: number }[];
-  statusData: { _id: string, count: number }[];
-  priorityData: { _id: string, count: number }[];
-  overTimeData: { _id: string, count: number }[];
+  categoryData: { _id: string; count: number }[];
+  statusData: { _id: string; count: number }[];
+  priorityData: { _id: string; count: number }[];
+  overTimeData: { _id: string; count: number }[];
   officerPerformanceData: any[];
   resolutionTimeData: any;
 }
@@ -53,43 +96,49 @@ interface ChartData {
 const Supervisor = () => {
   const [stats, setStats] = useState<CrimeStatistics | null>(null);
   const [complaints, setComplaints] = useState<Complaint[]>([]);
-  const [unassignedComplaints, setUnassignedComplaints] = useState<Complaint[]>([]);
+  const [unassignedComplaints, setUnassignedComplaints] = useState<Complaint[]>(
+    []
+  );
   const [officers, setOfficers] = useState<Officer[]>([]);
-  const [timeRange, setTimeRange] = useState('7d');
+  const [timeRange, setTimeRange] = useState("7d");
   const [loading, setLoading] = useState(true);
-  const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
-  const [noteText, setNoteText] = useState('');
+  const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(
+    null
+  );
+  const [noteText, setNoteText] = useState("");
   const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
   const [isReassignDialogOpen, setIsReassignDialogOpen] = useState(false);
-  const [newOfficerId, setNewOfficerId] = useState('');
-  const [reassignReason, setReassignReason] = useState('');
+  const [newOfficerId, setNewOfficerId] = useState("");
+  const [reassignReason, setReassignReason] = useState("");
   const [chartData, setChartData] = useState<ChartData>({
     categoryData: [],
     statusData: [],
     priorityData: [],
     overTimeData: [],
     officerPerformanceData: [],
-    resolutionTimeData: {}
+    resolutionTimeData: {},
   });
   const [chartLoading, setChartLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+
+  const actualUser = (user as any)?.user || user;
 
   const getDateRange = () => {
     const now = new Date();
     let startDate = new Date();
 
     switch (timeRange) {
-      case '24h':
+      case "24h":
         startDate.setDate(now.getDate() - 1);
         break;
-      case '7d':
+      case "7d":
         startDate.setDate(now.getDate() - 7);
         break;
-      case '30d':
+      case "30d":
         startDate.setDate(now.getDate() - 30);
         break;
-      case '90d':
+      case "90d":
         startDate.setDate(now.getDate() - 90);
         break;
       default:
@@ -98,7 +147,7 @@ const Supervisor = () => {
 
     return {
       startDate: startDate.toISOString(),
-      endDate: now.toISOString()
+      endDate: now.toISOString(),
     };
   };
 
@@ -121,14 +170,14 @@ const Supervisor = () => {
         priorityData,
         overTimeData,
         officerPerformanceData,
-        resolutionTimeData
+        resolutionTimeData,
       ] = await Promise.all([
         complaintsAPI.getComplaintsByCategory(startDate, endDate),
         complaintsAPI.getComplaintsByStatus(startDate, endDate),
         complaintsAPI.getComplaintsByPriority(startDate, endDate),
-        complaintsAPI.getComplaintsOverTime(startDate, endDate, 'day'),
+        complaintsAPI.getComplaintsOverTime(startDate, endDate, "day"),
         complaintsAPI.getOfficerPerformance(startDate, endDate),
-        complaintsAPI.getResolutionTimeStats(startDate, endDate)
+        complaintsAPI.getResolutionTimeStats(startDate, endDate),
       ]);
 
       setChartData({
@@ -137,14 +186,14 @@ const Supervisor = () => {
         priorityData,
         overTimeData,
         officerPerformanceData,
-        resolutionTimeData
+        resolutionTimeData,
       });
     } catch (error) {
       console.error("Error loading chart data:", error);
       toast({
         title: "Error loading chart data",
         description: "Failed to load report data",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setChartLoading(false);
@@ -160,7 +209,7 @@ const Supervisor = () => {
       toast({
         title: "Error loading unassigned complaints",
         description: "Failed to load unassigned complaint data",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -181,14 +230,14 @@ const Supervisor = () => {
           assigned: 0,
           investigating: 0,
           resolved: data.resolvedComplaints,
-          closed: 0
+          closed: 0,
         },
         byPriority: {
           low: 0,
           medium: data.totalComplaints - data.highPriorityComplaints,
           high: data.highPriorityComplaints,
-          urgent: 0
-        }
+          urgent: 0,
+        },
       };
 
       setStats(crimeStats);
@@ -196,7 +245,7 @@ const Supervisor = () => {
       toast({
         title: "Error loading statistics",
         description: "Failed to load dashboard data",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -211,7 +260,7 @@ const Supervisor = () => {
       toast({
         title: "Error loading complaints",
         description: "Failed to load complaint data",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -225,7 +274,7 @@ const Supervisor = () => {
       toast({
         title: "Error loading officers",
         description: "Failed to load officer list",
-        variant: "destructive"
+        variant: "destructive",
       });
       setOfficers([]);
     }
@@ -235,23 +284,28 @@ const Supervisor = () => {
     if (!selectedComplaint || !noteText.trim()) return;
 
     try {
-      const updatedComplaint = await complaintsAPI.addNote(selectedComplaint.id, noteText);
-      setComplaints(complaints.map(c =>
-        c.id === selectedComplaint.id ? updatedComplaint : c
-      ));
+      const updatedComplaint = await complaintsAPI.addNote(
+        selectedComplaint.id,
+        noteText
+      );
+      setComplaints(
+        complaints.map((c) =>
+          c.id === selectedComplaint.id ? updatedComplaint : c
+        )
+      );
       toast({
         title: "Note added",
-        description: "Note successfully added to complaint"
+        description: "Note successfully added to complaint",
       });
       setIsNoteDialogOpen(false);
-      setNoteText('');
+      setNoteText("");
       setSelectedComplaint(null);
     } catch (error) {
       console.error("Error adding note:", error);
       toast({
         title: "Error adding note",
         description: "Failed to add note to complaint",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -261,38 +315,48 @@ const Supervisor = () => {
       toast({
         title: "Reassignment Error",
         description: "Please select an officer.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     try {
       if (reassignReason) {
-        await complaintsAPI.addNote(selectedComplaint.id, `Reassigned by supervisor: ${reassignReason}`);
+        await complaintsAPI.addNote(
+          selectedComplaint.id,
+          `Reassigned by supervisor: ${reassignReason}`
+        );
       }
 
-      const updatedComplaint = await complaintsAPI.assignComplaint(selectedComplaint.id, newOfficerId);
+      const updatedComplaint = await complaintsAPI.assignComplaint(
+        selectedComplaint.id,
+        newOfficerId
+      );
 
-      setComplaints(complaints.map(c =>
-        c.id === selectedComplaint.id ? updatedComplaint : c
-      ));
-      setUnassignedComplaints(unassignedComplaints.filter(c => c.id !== selectedComplaint.id));
+      setComplaints(
+        complaints.map((c) =>
+          c.id === selectedComplaint.id ? updatedComplaint : c
+        )
+      );
+      setUnassignedComplaints(
+        unassignedComplaints.filter((c) => c.id !== selectedComplaint.id)
+      );
 
       toast({
         title: "Complaint reassigned",
-        description: "Complaint successfully reassigned to new officer"
+        description: "Complaint successfully reassigned to new officer",
       });
 
       setIsReassignDialogOpen(false);
-      setNewOfficerId('');
-      setReassignReason('');
+      setNewOfficerId("");
+      setReassignReason("");
       setSelectedComplaint(null);
     } catch (error) {
       console.error("Error reassigning complaint:", error);
       toast({
         title: "Error reassigning complaint",
         description: "Failed to reassign complaint",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -302,32 +366,44 @@ const Supervisor = () => {
     const now = new Date();
     const diffInHours = (now.getTime() - createdDate.getTime()) / (1000 * 3600);
 
-    if (diffInHours > 24) return 'urgent';
-    if (diffInHours > 12) return 'high';
-    if (diffInHours > 1) return 'medium';
+    if (diffInHours > 24) return "urgent";
+    if (diffInHours > 12) return "high";
+    if (diffInHours > 1) return "medium";
     return complaint.priority;
   };
 
   const getAgingComplaints = () => {
     return complaints
-      .filter(c => c.status !== 'resolved' && c.status !== 'closed' && c.assignedOfficer)
-      .map(c => ({
+      .filter(
+        (c) =>
+          c.status !== "resolved" && c.status !== "closed" && c.assignedOfficer
+      )
+      .map((c) => ({
         ...c,
-        agingPriority: calculateAgingPriority(c)
+        agingPriority: calculateAgingPriority(c),
       }))
-      .filter(c => c.agingPriority !== c.priority) // Only show complaints that have aged
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      .filter((c) => c.agingPriority !== c.priority) // Only show complaints that have aged
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
   };
 
   const getNormalPriorityComplaints = () => {
     return complaints
-      .filter(c => c.status !== 'resolved' && c.status !== 'closed' && c.assignedOfficer)
-      .map(c => ({
+      .filter(
+        (c) =>
+          c.status !== "resolved" && c.status !== "closed" && c.assignedOfficer
+      )
+      .map((c) => ({
         ...c,
-        agingPriority: calculateAgingPriority(c)
+        agingPriority: calculateAgingPriority(c),
       }))
-      .filter(c => c.agingPriority === c.priority) // Only show complaints that haven't aged
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      .filter((c) => c.agingPriority === c.priority) // Only show complaints that haven't aged
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
   };
 
   const refreshAll = () => {
@@ -359,7 +435,8 @@ const Supervisor = () => {
         <div>
           <h1 className="text-3xl font-bold mb-2">Supervisor Dashboard</h1>
           <p className="text-muted-foreground">
-            Welcome, {user?.firstName}. Monitor operations and analyze crime data.
+            Welcome, {actualUser?.firstName}. Monitor operations and analyze
+            crime data.
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -397,35 +474,49 @@ const Supervisor = () => {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Pending Review
+            </CardTitle>
             <Clock className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.pendingReports}</div>
+            <div className="text-2xl font-bold text-yellow-600">
+              {stats.pendingReports}
+            </div>
             <p className="text-xs text-muted-foreground">
-              {((stats.pendingReports / stats.totalReports) * 100).toFixed(1)}% of total
+              {((stats.pendingReports / stats.totalReports) * 100).toFixed(1)}%
+              of total
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Resolved Cases</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Resolved Cases
+            </CardTitle>
             <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.resolvedReports}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {stats.resolvedReports}
+            </div>
             <p className="text-xs text-muted-foreground">
-              {((stats.resolvedReports / stats.totalReports) * 100).toFixed(1)}% resolution rate
+              {((stats.resolvedReports / stats.totalReports) * 100).toFixed(1)}%
+              resolution rate
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Resolution</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Avg Resolution
+            </CardTitle>
             <TrendingUp className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.averageResolutionTime}h</div>
+            <div className="text-2xl font-bold text-blue-600">
+              {stats.averageResolutionTime}h
+            </div>
             <p className="text-xs text-muted-foreground">
               Average time to resolve
             </p>
@@ -448,11 +539,15 @@ const Supervisor = () => {
           <CardContent>
             <div className="space-y-4">
               {unassignedComplaints.slice(0, 5).map((complaint) => (
-                <div key={complaint.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div
+                  key={complaint.id}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
                   <div>
                     <h4 className="font-medium">{complaint.title}</h4>
                     <p className="text-sm text-muted-foreground">
-                      Case #{complaint.caseNumber} • Created {new Date(complaint.createdAt).toLocaleDateString()}
+                      Case #{complaint.caseNumber} • Created{" "}
+                      {new Date(complaint.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -485,35 +580,44 @@ const Supervisor = () => {
               Priority Escalations
             </CardTitle>
             <CardDescription>
-              These complaints have been unsolved for too long and require immediate attention
+              These complaints have been unsolved for too long and require
+              immediate attention
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {getAgingComplaints().slice(0, 5).map((complaint) => (
-                <div key={complaint.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <h4 className="font-medium">{complaint.title}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Case #{complaint.caseNumber} • Created {new Date(complaint.createdAt).toLocaleDateString()}
-                    </p>
+              {getAgingComplaints()
+                .slice(0, 5)
+                .map((complaint) => (
+                  <div
+                    key={complaint.id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div>
+                      <h4 className="font-medium">{complaint.title}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Case #{complaint.caseNumber} • Created{" "}
+                        {new Date(complaint.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="destructive">
+                        Escalated to {complaint.agingPriority}
+                      </Badge>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedComplaint(complaint);
+                          setIsReassignDialogOpen(true);
+                        }}
+                      >
+                        <RotateCcw className="h-4 w-4 mr-1" />
+                        Reassign
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="destructive">Escalated to {complaint.agingPriority}</Badge>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedComplaint(complaint);
-                        setIsReassignDialogOpen(true);
-                      }}
-                    >
-                      <RotateCcw className="h-4 w-4 mr-1" />
-                      Reassign
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                ))}
             </div>
           </CardContent>
         </Card>
@@ -533,36 +637,43 @@ const Supervisor = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {getNormalPriorityComplaints().slice(0, 5).map((complaint) => (
-                <div key={complaint.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <h4 className="font-medium">{complaint.title}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Case #{complaint.caseNumber} • Created {new Date(complaint.createdAt).toLocaleDateString()}
-                    </p>
-                    {complaint.assignedOfficer && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Assigned to: {complaint.assignedOfficer.name}
+              {getNormalPriorityComplaints()
+                .slice(0, 5)
+                .map((complaint) => (
+                  <div
+                    key={complaint.id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div>
+                      <h4 className="font-medium">{complaint.title}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Case #{complaint.caseNumber} • Created{" "}
+                        {new Date(complaint.createdAt).toLocaleDateString()}
                       </p>
-                    )}
+                      {complaint.assignedOfficer && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Assigned to: {complaint.assignedOfficer.name}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="default">
+                        {complaint.priority.charAt(0).toUpperCase() +
+                          complaint.priority.slice(1)}
+                      </Badge>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedComplaint(complaint);
+                          setIsNoteDialogOpen(true);
+                        }}
+                      >
+                        Add Note
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="default">
-                      {complaint.priority.charAt(0).toUpperCase() + complaint.priority.slice(1)}
-                    </Badge>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedComplaint(complaint);
-                        setIsNoteDialogOpen(true);
-                      }}
-                    >
-                      Add Note
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                ))}
             </div>
           </CardContent>
         </Card>
@@ -618,13 +729,18 @@ const Supervisor = () => {
                         fill="#8884d8"
                         dataKey="count"
                         nameKey="_id"
-                        label={({ _id, percent }) => `${_id}: ${(percent * 100).toFixed(0)}%`}
+                        label={({ _id, percent }) =>
+                          `${_id}: ${(percent * 100).toFixed(0)}%`
+                        }
                       >
                         {chartData.categoryData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={COLORS[index % COLORS.length]}
+                          />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value) => [value, 'Complaints']} />
+                      <Tooltip formatter={(value) => [value, "Complaints"]} />
                     </PieChart>
                   </ResponsiveContainer>
                 )}
@@ -643,10 +759,13 @@ const Supervisor = () => {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="_id" />
                       <YAxis />
-                      <Tooltip formatter={(value) => [value, 'Complaints']} />
+                      <Tooltip formatter={(value) => [value, "Complaints"]} />
                       <Bar dataKey="count" fill="#8884d8">
                         {chartData.statusData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={COLORS[index % COLORS.length]}
+                          />
                         ))}
                       </Bar>
                     </BarChart>
@@ -667,7 +786,7 @@ const Supervisor = () => {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="_id" />
                       <YAxis />
-                      <Tooltip formatter={(value) => [value, 'Complaints']} />
+                      <Tooltip formatter={(value) => [value, "Complaints"]} />
                       <Bar dataKey="count" fill="#82ca9d" />
                     </BarChart>
                   </ResponsiveContainer>
@@ -687,8 +806,14 @@ const Supervisor = () => {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="_id" />
                       <YAxis />
-                      <Tooltip formatter={(value) => [value, 'Complaints']} />
-                      <Area type="monotone" dataKey="count" stroke="#8884d8" fill="#8884d8" fillOpacity={0.3} />
+                      <Tooltip formatter={(value) => [value, "Complaints"]} />
+                      <Area
+                        type="monotone"
+                        dataKey="count"
+                        stroke="#8884d8"
+                        fill="#8884d8"
+                        fillOpacity={0.3}
+                      />
                     </AreaChart>
                   </ResponsiveContainer>
                 )}
@@ -708,7 +833,7 @@ const Supervisor = () => {
             <div>
               <label className="text-sm font-medium">Case Number</label>
               <Input
-                value={selectedComplaint?.caseNumber || ''}
+                value={selectedComplaint?.caseNumber || ""}
                 readOnly
                 className="mt-1"
               />
@@ -724,45 +849,54 @@ const Supervisor = () => {
               />
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsNoteDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsNoteDialogOpen(false)}
+              >
                 Cancel
               </Button>
-              <Button onClick={handleAddNote}>
-                Add Note
-              </Button>
+              <Button onClick={handleAddNote}>Add Note</Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Reassign Complaint Dialog */}
-      <Dialog open={isReassignDialogOpen} onOpenChange={(open) => {
-        setIsReassignDialogOpen(open);
-        if (!open) {
-          // Reset form when dialog closes
-          setNewOfficerId('');
-          setReassignReason('');
-          setSelectedComplaint(null);
-        }
-      }}>
+      <Dialog
+        open={isReassignDialogOpen}
+        onOpenChange={(open) => {
+          setIsReassignDialogOpen(open);
+          if (!open) {
+            // Reset form when dialog closes
+            setNewOfficerId("");
+            setReassignReason("");
+            setSelectedComplaint(null);
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {selectedComplaint?.assignedOfficer ? "Reassign Complaint" : "Assign Complaint"}
+              {selectedComplaint?.assignedOfficer
+                ? "Reassign Complaint"
+                : "Assign Complaint"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium">Case Number</label>
               <Input
-                value={selectedComplaint?.caseNumber || ''}
+                value={selectedComplaint?.caseNumber || ""}
                 readOnly
                 className="mt-1"
               />
             </div>
             <div>
               <label className="text-sm font-medium">Select Officer</label>
-              <SelectComponent value={newOfficerId} onValueChange={setNewOfficerId}>
+              <SelectComponent
+                value={newOfficerId}
+                onValueChange={setNewOfficerId}
+              >
                 <SelectTriggerComponent className="mt-1">
                   <SelectValueComponent placeholder="Select an officer" />
                 </SelectTriggerComponent>
@@ -782,7 +916,12 @@ const Supervisor = () => {
               </SelectComponent>
             </div>
             <div>
-              <label className="text-sm font-medium">{selectedComplaint?.assignedOfficer ? "Reason for Reassignment" : "Note for Assignment"} (Optional)</label>
+              <label className="text-sm font-medium">
+                {selectedComplaint?.assignedOfficer
+                  ? "Reason for Reassignment"
+                  : "Note for Assignment"}{" "}
+                (Optional)
+              </label>
               <Textarea
                 value={reassignReason}
                 onChange={(e) => setReassignReason(e.target.value)}
@@ -792,11 +931,16 @@ const Supervisor = () => {
               />
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsReassignDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsReassignDialogOpen(false)}
+              >
                 Cancel
               </Button>
               <Button onClick={handleReassignComplaint}>
-                {selectedComplaint?.assignedOfficer ? "Reassign Complaint" : "Assign Complaint"}
+                {selectedComplaint?.assignedOfficer
+                  ? "Reassign Complaint"
+                  : "Assign Complaint"}
               </Button>
             </div>
           </div>
